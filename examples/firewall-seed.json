@@ -1,0 +1,16 @@
+{
+  "accounts": [
+    {
+      "address": "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
+      "balance": "100000000",
+      "sequence": 1
+    }
+  ],
+  "hookState": [
+    {
+      "account": "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
+      "key": "0000000000000000000000000000000000000000000000000000000000000000",
+      "value": "01"
+    }
+  ]
+}

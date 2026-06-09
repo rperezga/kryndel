@@ -1,0 +1,19 @@
+{
+  "name": "@kryndel/cli",
+  "version": "0.0.1",
+  "description": "Kryndel CLI — watch, trace & alert on XRPL contracts (EVM Sidechain + native)",
+  "type": "module",
+  "bin": {
+    "kryndel": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "node --import tsx/esm src/index.ts"
+  },
+  "dependencies": {
+    "@kryndel/core": "workspace:*",
+    "commander": "^12.1.0",
+    "picocolors": "^1.1.1"
+  },
+  "license": "Apache-2.0"
+}
