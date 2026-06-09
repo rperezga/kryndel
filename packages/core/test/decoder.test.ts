@@ -15,8 +15,9 @@ describe('createEvmDecoder', () => {
   it('decodeCall — decodifica transfer correctamente', () => {
     const result = decoder.decodeCall(calldata);
     expect(result.name).toBe('transfer');
-    expect(result.args).toHaveProperty('to');
-    expect(result.args).toHaveProperty('amount');
+    // viem devuelve args como array posicional → argsToRecord usa índices '0', '1'
+    expect(result.args).toHaveProperty('0'); // to address
+    expect(result.args).toHaveProperty('1'); // amount
   });
 
   it('decodeCall — calldata desconocida → fallback graceful', () => {

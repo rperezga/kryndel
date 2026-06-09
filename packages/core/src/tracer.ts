@@ -3,7 +3,6 @@ import { createEvmDecoder, ERC20_ABI } from './decoder.js';
 import type { ContractRef, Trace, TraceEvent, ContractEvent } from './types.js';
 
 // Tracer — obtiene el receipt de un tx EVM y produce un Trace estructurado.
-// Etapa 5 ✅
 
 export interface TraceOptions {
   endpoint: string;  // EVM_RPC_URL
@@ -21,7 +20,6 @@ export async function traceEvmTx(txHash: string, opts: TraceOptions): Promise<Tr
     transport: http(opts.endpoint, { timeout: 20_000, retryCount: 3, retryDelay: 1_500 }),
   });
 
-  // Obtener tx + receipt en paralelo.
   const [tx, receipt] = await Promise.all([
     client.getTransaction({ hash: txHash as `0x${string}` }),
     client.getTransactionReceipt({ hash: txHash as `0x${string}` }),
@@ -37,14 +35,13 @@ export async function traceEvmTx(txHash: string, opts: TraceOptions): Promise<Tr
   const decoder = createEvmDecoder(contractRef);
 
   // Decodificar calldata del input.
+  // A2.10: fallback renombrado a "native value transfer" para no confundir con transfer() ERC-20.
   const decodedCall = tx.input && tx.input !== '0x'
     ? decoder.decodeCall(tx.input)
-    : { name: 'transfer (value only)', args: { value: tx.value?.toString() ?? '0' }, raw: tx.input };
+    : { name: 'native value transfer', args: { value: tx.value?.toString() ?? '0' }, raw: tx.input };
 
-  // Decodificar cada log del receipt.
-  const decodedEvents: ContractEvent[] = receipt.logs.map(log =>
-    decoder.decodeEvent(log)
-  );
+  // A2.6: decodificar cada log etiquetando si es externo al contrato objetivo.
+  const decodedEvents: ContractEvent[] = receipt.logs.map(log => decoder.decodeEvent(log));
 
   // Construir el timeline de TraceEvent.
   const events: TraceEvent[] = [
@@ -59,12 +56,20 @@ export async function traceEvmTx(txHash: string, opts: TraceOptions): Promise<Tr
         args: decodedCall.args,
       },
     },
-    ...decodedEvents.map((ev, i): TraceEvent => ({
-      t: i + 1,
-      kind: 'event',
-      label: ev.name,
-      data: ev.args,
-    })),
+    ...decodedEvents.map((ev, i): TraceEvent => {
+      // A2.6: etiquetar eventos de otros contratos como externos.
+      const isExternal = ev.contractAddress !== undefined &&
+        ev.contractAddress !== contractAddress;
+      return {
+        t: i + 1,
+        kind: 'event',
+        label: isExternal ? `[external] ${ev.name}` : ev.name,
+        data: {
+          ...ev.args,
+          ...(isExternal ? { _from: ev.contractAddress } : {}),
+        },
+      };
+    }),
     {
       t: decodedEvents.length + 1,
       kind: 'emit',

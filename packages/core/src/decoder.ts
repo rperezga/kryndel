@@ -113,7 +113,14 @@ export function createEvmDecoder(contract: ContractRef): Decoder {
     },
 
     decodeEvent(raw: unknown): ContractEvent {
-      const log = raw as { data?: `0x${string}`; topics?: `0x${string}`[]; transactionHash?: string; blockNumber?: bigint };
+      const log = raw as {
+        data?: `0x${string}`; topics?: `0x${string}`[];
+        transactionHash?: string; blockNumber?: bigint;
+        logIndex?: number; address?: string;
+      };
+      // A2.1: propagar logIndex · A2.4: propagar contractAddress
+      const logIndex = typeof log.logIndex === 'number' ? log.logIndex : undefined;
+      const contractAddress = log.address?.toLowerCase();
       try {
         const { eventName, args } = decodeEventLog({
           abi,
@@ -121,19 +128,22 @@ export function createEvmDecoder(contract: ContractRef): Decoder {
           topics: (log.topics ?? []) as [`0x${string}`, ...`0x${string}`[]],
         });
         return {
-          name:           String(eventName ?? 'unknown'),
-          args:           argsToRecord(args as unknown as Record<string, unknown>),
+          name:            String(eventName ?? 'unknown'),
+          args:            argsToRecord(args as unknown as Record<string, unknown>),
           raw,
-          txHash:         log.transactionHash ?? undefined,
-          ledgerOrBlock:  log.blockNumber ? Number(log.blockNumber) : undefined,
+          txHash:          log.transactionHash ?? undefined,
+          logIndex,
+          contractAddress,
+          ledgerOrBlock:   log.blockNumber ? Number(log.blockNumber) : undefined,
         };
       } catch {
-        // No coincide con la ABI — devuelve el topic0 como nombre y los datos crudos.
         return {
-          name:    log.topics?.[0] ?? 'unknown',
-          args:    {},
+          name:            log.topics?.[0] ?? 'unknown',
+          args:            {},
           raw,
-          txHash:  log.transactionHash ?? undefined,
+          txHash:          log.transactionHash ?? undefined,
+          logIndex,
+          contractAddress,
         };
       }
     },

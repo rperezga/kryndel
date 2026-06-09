@@ -23,4 +23,22 @@ describe('kryndel core (observability scaffold)', () => {
     expect(matchesRule(hit, rule)).toBe(true);
     expect(matchesRule(miss, rule)).toBe(false);
   });
+
+  // A2.4 CA: regla de contrato A no dispara con evento de contrato B
+  it('matchesRule — A2.4: filtra por contractAddress (case-insensitive)', () => {
+    const rule: AlertRule = {
+      id: '2', contract: '0xAAA', event: 'Transfer',
+      channel: 'telegram', target: '123',
+    };
+    const sameContract: ContractEvent = {
+      name: 'Transfer', args: {}, contractAddress: '0xaaa',
+    };
+    const otherContract: ContractEvent = {
+      name: 'Transfer', args: {}, contractAddress: '0xBBB',
+    };
+    const noAddress: ContractEvent = { name: 'Transfer', args: {} };
+    expect(matchesRule(sameContract, rule)).toBe(true);   // case-insensitive match
+    expect(matchesRule(otherContract, rule)).toBe(false); // contrato diferente
+    expect(matchesRule(noAddress, rule)).toBe(true);      // sin address: no filtra
+  });
 });

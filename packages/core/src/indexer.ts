@@ -3,13 +3,26 @@ import type { ContractRef, DecodedCall, ContractEvent } from './types.js';
 
 // Indexer — persiste contratos, llamadas y eventos en MongoDB.
 // Colecciones: `contracts`, `calls`, `events`.
-// URI desde la variable de entorno MONGODB_URI (p.ej. mongodb://localhost:27017).
 
 export interface Indexer {
   upsertContract(c: ContractRef): Promise<void>;
   saveCall(contract: string, call: DecodedCall, txHash?: string): Promise<void>;
   saveEvent(contract: string, event: ContractEvent): Promise<void>;
   close(): Promise<void>;
+}
+
+// A2.3: sanitiza claves de objetos recursivamente para evitar operadores MongoDB.
+// $ → ＄ (fullwidth dollar), . → _ (underscore)
+export function sanitizeKeys(obj: unknown): unknown {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(sanitizeKeys);
+  return Object.fromEntries(
+    Object.entries(obj as Record<string, unknown>).map(([k, v]) => [
+      k.replace(/\$/g, '＄').replace(/\./g, '_'),
+      sanitizeKeys(v),
+    ])
+  );
 }
 
 export function createMongoIndexer(uri: string, dbName = 'kryndel'): Indexer {
@@ -20,12 +33,21 @@ export function createMongoIndexer(uri: string, dbName = 'kryndel'): Indexer {
     if (!db) {
       await client.connect();
       db = client.db(dbName);
-      // Índices únicos para evitar duplicados en re-indexaciones.
       const events: Collection = db.collection('events');
       const calls:  Collection = db.collection('calls');
-      await events.createIndex({ contract: 1, txHash: 1, name: 1 }, { unique: true, sparse: true, background: true });
-      await calls.createIndex(  { contract: 1, txHash: 1 },          { unique: true, sparse: true, background: true });
-      await db.collection('contracts').createIndex({ address: 1, surface: 1 }, { unique: true, background: true });
+      // A2.1: índice único incluye logIndex para capturar 2 Transfer en la misma tx.
+      await events.createIndex(
+        { contract: 1, txHash: 1, name: 1, logIndex: 1 },
+        { unique: true, sparse: true, background: true },
+      );
+      await calls.createIndex(
+        { contract: 1, txHash: 1 },
+        { unique: true, sparse: true, background: true },
+      );
+      await db.collection('contracts').createIndex(
+        { address: 1, surface: 1 },
+        { unique: true, background: true },
+      );
     }
     return db;
   }
@@ -42,9 +64,10 @@ export function createMongoIndexer(uri: string, dbName = 'kryndel'): Indexer {
 
     async saveCall(contract: string, call: DecodedCall, txHash?: string): Promise<void> {
       const d = await getDb();
-      const doc = { contract, ...call, txHash, indexedAt: new Date() };
+      // A2.3: sanitizar args antes de guardar.
+      const safeArgs = sanitizeKeys(call.args) as Record<string, unknown>;
+      const doc = { contract, ...call, args: safeArgs, txHash, indexedAt: new Date() };
       if (txHash) {
-        // Idempotente: si ya está indexado lo ignora.
         await d.collection('calls').updateOne(
           { contract, txHash },
           { $setOnInsert: doc },
@@ -57,12 +80,14 @@ export function createMongoIndexer(uri: string, dbName = 'kryndel'): Indexer {
 
     async saveEvent(contract: string, event: ContractEvent): Promise<void> {
       const d = await getDb();
-      // Extraemos `raw` para no guardarlo en Mongo (puede ser muy grande).
       const { raw: _raw, ...rest } = event;
-      const doc = { contract, ...rest, indexedAt: new Date() };
+      // A2.3: sanitizar args antes de guardar.
+      const safeArgs = sanitizeKeys(rest.args) as Record<string, unknown>;
+      const doc = { contract, ...rest, args: safeArgs, indexedAt: new Date() };
       if (event.txHash) {
+        // A2.1: filtro del upsert incluye logIndex.
         await d.collection('events').updateOne(
-          { contract, txHash: event.txHash, name: event.name },
+          { contract, txHash: event.txHash, name: event.name, logIndex: event.logIndex ?? null },
           { $setOnInsert: doc },
           { upsert: true },
         );

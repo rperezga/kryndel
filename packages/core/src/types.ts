@@ -22,6 +22,8 @@ export interface ContractEvent {
   args: Record<string, unknown>;
   raw?: unknown;
   txHash?: string;
+  logIndex?: number;           // A2.1: para índice único (contract, txHash, name, logIndex)
+  contractAddress?: string;    // A2.4: address del contrato emisor — para matchesRule
   ledgerOrBlock?: number;
 }
 

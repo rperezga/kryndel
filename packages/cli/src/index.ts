@@ -87,11 +87,11 @@ program
       }
 
       const { createEvmWatcher, createEvmDecoder, createMongoIndexer, createPipeline } = await import('@kryndel/core');
-      const demo = '0x7C21a90E3eCD3215d16c3BBe76a491f8f792d4Bf'; // WXRP — contrato de demo
-      // Con indexer: siempre necesitamos una address. Sin indexer: undefined = escuchar todos.
+      // A2.9: leer contrato demo desde env; fallback al hardcoded.
+      const demo = process.env.EVM_DEMO_CONTRACT ?? '0x7C21a90E3eCD3215d16c3BBe76a491f8f792d4Bf';
       const target = address ?? (useIndex ? demo : undefined);
       console.log(pc.cyan(`watch ${target ?? '(todos)'} --net evm`), pc.dim('→'), endpoint);
-      if (!address && useIndex) console.log(pc.dim(`ℹ sin address — usando WXRP de demo: ${demo}`));
+      if (!address && useIndex) console.log(pc.dim(`ℹ sin address — usando demo: ${demo}`));
       if (!address && !useIndex) console.log(pc.dim('ℹ sin address — escuchando TODOS los contratos (--no-index)'));
 
       let seen = 0;
@@ -222,9 +222,17 @@ program
       process.exit(1);
     }
 
-    // Parsear filtro opcional.
+    // A2.5: --filter con JSON inválido → error fatal (nunca fallback silencioso).
     let filter: Record<string, unknown> = {};
-    try { filter = JSON.parse(opts.filter); } catch { /* usa {} */ }
+    if (opts.filter && opts.filter !== '{}') {
+      try {
+        filter = JSON.parse(opts.filter);
+      } catch {
+        console.error(pc.red(`✖ --filter JSON inválido: ${opts.filter}`));
+        console.error(pc.dim('  Ejemplo: --filter \'{"to":"0x1234…"}\''));
+        process.exit(1);
+      }
+    }
 
     const {
       createEvmDecoder, createMongoIndexer, createPipeline,

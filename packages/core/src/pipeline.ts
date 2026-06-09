@@ -59,13 +59,10 @@ export async function createPipeline(opts: PipelineOptions): Promise<Pipeline> {
 
   const fireAlerts = async (decoded: ContractEvent): Promise<void> => {
     if (!opts.subscriber || !opts.dispatcher) return;
-    const matched: Array<{ event: ContractEvent; ruleId: string }> = [];
-
-    // Registramos un listener temporal para capturar coincidencias.
+    // A2.8: eliminado array `matched` (era código muerto).
     const { matchesRule } = await import('./subscriber.js');
     for (const rule of opts.subscriber.rules()) {
       if (matchesRule(decoded, rule)) {
-        matched.push({ event: decoded, ruleId: rule.id });
         try {
           await opts.dispatcher.dispatch(decoded, rule);
         } catch (e) {
@@ -88,6 +85,8 @@ export async function createPipeline(opts: PipelineOptions): Promise<Pipeline> {
         decoded = { name: call.name, args: call.args, txHash: activity.txHash };
       } else {
         decoded = opts.decoder.decodeEvent(activity.raw);
+        // A2.4: propagar contractAddress para matchesRule.
+        decoded = { ...decoded, contractAddress: activity.contract };
         await opts.indexer.saveEvent(activity.contract, decoded);
         opts.onActivity?.(activity, { name: decoded.name, args: decoded.args });
       }

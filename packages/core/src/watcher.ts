@@ -165,7 +165,11 @@ export function createEvmWatcher(opts: WatchOptions): Watcher {
       // Lookback fijo de LOOKBACK bloques en cada poll para garantizar fromBlock < toBlock.
       // Dedup por "blockNumber:logIndex" para evitar emitir el mismo log dos veces.
       const LOOKBACK = 5n;
-      const seen = new Set<string>();
+      // A2.7: poda parcial — elimina la mitad más vieja al superar el límite.
+      // Evita re-emisión de logs aún visibles en el lookback tras un seen.clear() total.
+      const seen = new Map<string, number>(); // key → orden de inserción
+      let seenCounter = 0;
+      const SEEN_MAX = 2_000;
 
       const poll = async (): Promise<void> => {
         if (stopped) return;
@@ -177,12 +181,17 @@ export function createEvmWatcher(opts: WatchOptions): Watcher {
           const logs = await client.getLogs({ fromBlock, toBlock });
           for (const log of logs) {
             if (stopped) break;
-            // Filtro client-side: si se especificó address, ignorar logs de otros contratos.
             if (address && log.address.toLowerCase() !== address.toLowerCase()) continue;
             const key = `${String(log.blockNumber)}:${String(log.logIndex)}`;
             if (seen.has(key)) continue;
-            seen.add(key);
-            if (seen.size > 2_000) seen.clear();
+            seen.set(key, seenCounter++);
+            // Poda parcial: al superar SEEN_MAX, borra la mitad más vieja.
+            if (seen.size > SEEN_MAX) {
+              const cutoff = seenCounter - SEEN_MAX / 2;
+              for (const [k, idx] of seen) {
+                if (idx < cutoff) seen.delete(k);
+              }
+            }
             const topic0 = log.topics[0] ?? undefined;
             onActivity({
               kind: 'event',
