@@ -34,7 +34,7 @@ npx kryndel web                                      # open the explorer
 
 ## Status
 
-Pivoted from a WASM-Hooks simulator to observability after an ecosystem study (Jun 2026). See `DELTA.md` (what was reused/changed) and `PLAN.md` (roadmap). The previous Hooks-simulator code is preserved under `packages/core/legacy/hooks-sim/`.
+Pivoted from a WASM-Hooks simulator to observability after an ecosystem study (Jun 2026). The previous Hooks-simulator code is preserved under `packages/core/legacy/hooks-sim/`. Phase 1 (MVP) in progress: watchers (EVM mainnet + AlphaNet), decoder, MongoDB indexer, Telegram alerts and `trace` working; web explorer, tests and docs underway.
 
 ## License
 
