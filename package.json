@@ -5,8 +5,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "vitest run",
-    "lint": "eslint packages --ext .ts"
+    "build": "tsc --project packages/core/tsconfig.json && tsc --project packages/cli/tsconfig.json",
+    "test":  "vitest run",
+    "lint":  "eslint packages/"
   },
   "keywords": [
     "xrpl",

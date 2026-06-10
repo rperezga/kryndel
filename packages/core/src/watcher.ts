@@ -66,12 +66,14 @@ export function parseTransactionMessage(msg: unknown): ContractActivity | null {
 }
 
 // WebSocket nativo global (Node ≥ 22). Evita dependencias extra y @types/ws.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const WS: any = (globalThis as { WebSocket?: unknown }).WebSocket;
 
 export function createNativeWatcher(opts: WatchOptions): Watcher {
   if (!WS) {
     throw new Error('WebSocket global no disponible — requiere Node ≥ 22 (o usa el paquete `ws`).');
   }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let socket: any;
   let stopped = false;
   let backoff = 1000;
