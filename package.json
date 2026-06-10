@@ -1,6 +1,6 @@
 {
   "name": "kryndel",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Observability & alerts layer for XRPL programmable logic — index, decode, trace and alert on deployed contracts (EVM Sidechain + native).",
   "private": true,
   "type": "module",
