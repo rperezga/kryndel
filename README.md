@@ -1,41 +1,97 @@
-# kryndel
+# Kryndel
 
-> **The observability & alerts layer for XRPL programmable logic.**
-> Index, decode, trace and **alert** on deployed contracts — XRPL EVM Sidechain (mainnet) and native contracts (AlphaNet).
+> **Observability & alerts for XRPL programmable logic.**
+> Index, decode, trace and alert on deployed contracts — XRPL EVM Sidechain (mainnet) and Hooks (Xahau testnet).
 
-**WIP — under active development.** Apache-2.0.
+[![CI](https://github.com/rperezga/kryndel/actions/workflows/ci.yml/badge.svg)](https://github.com/rperezga/kryndel/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 ---
 
-## Why Kryndel
+## What it does
 
-The XRPL is gaining a contract layer — the **XRPL EVM Sidechain** (mainnet since 30-Jun-2025, real DeFi today) and **native WASM contracts** (AlphaNet, XLS-0101) `[verificar exact native mainnet timeline]`. But there's no "Etherscan + monitor" for it: existing explorers (XRPScan, Bithomp) don't decode contracts or their events, and don't alert.
+The XRPL now has a contract layer — the **EVM Sidechain** (mainnet, chain ID 1440002) and **native Hooks** (Xahau testnet). But there's no "Etherscan + monitor" for it: existing explorers don't decode contracts or alert.
 
-Kryndel fills that gap: point at a contract → see its decoded calls, emitted events and triggered transactions in a visual **x-ray**, then click **"watch this event"** → get a Telegram/Discord alert.
+Kryndel fills that gap:
 
-## Position (honest)
+- **Watch** a contract → stream decoded calls and events to MongoDB.
+- **Trace** a tx → get a structured timeline of the call, events fired, and result.
+- **Alert** → send a Telegram message the moment a specific event fires.
 
-- **vs `ripple/craft` (wasm-host-simulator):** craft is dev-time, local, terminal, Rust. Kryndel is **deploy-time + production**, visual, with alerts — and can *wrap* craft for optional preview. We don't reimplement it.
-- **vs XRPScan / Bithomp:** mature explorers for payments/tokens/NFT/AMM — but they don't decode contracts or alert. Kryndel focuses **only on the contract layer + alerts**.
-- **Honest risk:** native contracts aren't on mainnet yet → we prove value on the **EVM sidechain (mainnet)** today. Incumbent explorers could extend to contracts → our defensible wedge is **alerts + developer workflow**, not generic exploration.
+## Quickstart
 
-## Stack
-
-100% TypeScript, no Rust. `watcher` (Clio/rippled WS + EVM RPC via `viem`) → `decoder` (on-chain / standard ABIs) → `indexer` (MongoDB) → `recorder` (trace) → `subscriber` → `alerts` (Telegram). Explorer in Next.js. Optional simulation wraps `ripple/craft`.
-
-## Quickstart (target)
+**Requirements:** Node ≥ 20, pnpm ≥ 11, MongoDB (Atlas M0 free tier works).
 
 ```bash
-npx kryndel watch <contractAddress> --net evm        # index a contract's calls/events
-npx kryndel trace <txHashOrCall> --json > trace.json # decode one call into a structured trace
-npx kryndel alert <contractAddress> --event Transfer --to telegram
-npx kryndel web                                      # open the explorer
+git clone https://github.com/rperezga/kryndel.git
+cd kryndel
+pnpm install
+cp .env.example .env   # fill in EVM_RPC_URL, MONGODB_URI, TELEGRAM_*
 ```
 
-## Status
+Build:
 
-Pivoted from a WASM-Hooks simulator to observability after an ecosystem study (Jun 2026). The previous Hooks-simulator code is preserved under `packages/core/legacy/hooks-sim/`. Phase 1 (MVP) in progress: watchers (EVM mainnet + AlphaNet), decoder, MongoDB indexer, Telegram alerts and `trace` working; web explorer, tests and docs underway.
+```bash
+pnpm exec tsc --project packages/core/tsconfig.json
+pnpm exec tsc --project packages/cli/tsconfig.json
+```
+
+Run (from repo root):
+
+```bash
+# Watch a contract and index to MongoDB
+node --env-file=.env packages/cli/dist/index.js watch 0x7C21a90E3eCD3215d16c3BBe76a491f8f792d4Bf
+
+# Decode a transaction into a structured trace
+node --env-file=.env packages/cli/dist/index.js trace 0x5c62e522... --net evm
+
+# Trace a native Hooks transaction
+node --env-file=.env packages/cli/dist/index.js trace 1254E600... --net alphanet
+
+# Alert when a Transfer fires on a contract
+node --env-file=.env packages/cli/dist/index.js alert 0x7ddb2d... --event Transfer --to telegram
+
+# Watch all contracts without indexing (live event stream)
+node --env-file=.env packages/cli/dist/index.js watch --no-index
+```
+
+## Architecture
+
+```
+EVM RPC ──┐
+           ├─▶  watcher  ─▶  decoder  ─▶  indexer (MongoDB)
+Hooks WS ─┘                      │
+                                  └─▶  subscriber  ─▶  alert (Telegram / webhook)
+                                  └─▶  tracer  ─▶  trace timeline
+```
+
+- **`packages/core`** — watcher, decoder, indexer, subscriber, alerts, tracer.
+- **`packages/cli`** — `kryndel` CLI (watch / trace / alert / web).
+- **`packages/web`** — Next.js explorer (Phase 1 M3, in progress).
+
+## Networks
+
+| Network | Status | RPC |
+|---|---|---|
+| XRPL EVM Sidechain (mainnet) | ✅ Live | `https://rpc.xrplevm.org` (chain ID 1440002) |
+| Xahau Hooks testnet | ✅ Live | `https://hooks-testnet-v3.xrpl-labs.com` |
+
+## Tests
+
+```bash
+cd packages/core
+pnpm exec vitest run
+# 7 test files, 43 tests — all offline (fixtures in test/fixtures/)
+```
+
+## Honest limitations
+
+See [LIMITATIONS.md](LIMITATIONS.md) for the full list. Short version: no real-time filter subscriptions on the EVM RPC (we poll), no state diff, no REST API, no web explorer yet, native decoder returns Hook return strings only (no ABI on-chain for Hooks).
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-Apache-2.0.
+[Apache-2.0](LICENSE)
