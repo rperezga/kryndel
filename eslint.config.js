@@ -4,8 +4,8 @@ import prettierConfig from "eslint-config-prettier";
 
 export default [
   {
-    // Código legado archivado — no lintear (ver DELTA.md DEC-006)
-    ignores: ["packages/**/legacy/**"],
+    // Excluir código compilado y legado archivado (ver DELTA.md DEC-006)
+    ignores: ["packages/**/dist/**", "packages/**/legacy/**"],
   },
   {
     files: ["packages/**/*.ts"],
