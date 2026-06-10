@@ -1,0 +1,76 @@
+{
+  "result": {
+    "Account": "rUncrjtPhAkxzmLEKVQFJowYvmXWn21E1S",
+    "EmitDetails": {
+      "EmitBurden": "1",
+      "EmitCallback": "rUncrjtPhAkxzmLEKVQFJowYvmXWn21E1S",
+      "EmitGeneration": 1,
+      "EmitHookHash": "9F2B2E342FF4C65343980B7A9F78200B283D84732C1E80376A80A0E11628F7C6",
+      "EmitNonce": "20892785A4317F456599B795FABE11A0F830FDD4CF2299D91419934A7F0E5D05",
+      "EmitParentTxnID": "0639459051E3E64F752F3C38C5F5E4C0938C0B8AF53BCE66480CBA9FC6BE881A"
+    },
+    "Fee": "21",
+    "FirstLedgerSequence": 9515125,
+    "Flags": 0,
+    "Issuer": "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
+    "LastLedgerSequence": 9515129,
+    "Sequence": 0,
+    "SigningPubKey": "0000000000000000000000000000000000000000000000000000000000000000000000",
+    "TransactionType": "ClaimReward",
+    "hash": "1254E6008564A51CB20A227DC567E04FA47AFE948F43B11697D9FE4F09EA1E5D",
+    "inLedger": 9515125,
+    "ledger_index": 9515125,
+    "status": "success",
+    "validated": true,
+    "meta": {
+      "AffectedNodes": [
+        {
+          "ModifiedNode": {
+            "FinalFields": {
+              "Account": "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
+              "Balance": "2521054186"
+            },
+            "LedgerEntryType": "AccountRoot",
+            "LedgerIndex": "2B6AC232AA4C4BE41BF49D2459FA4A0347E1B543A4C92FCEE0821C0201E2E9A8",
+            "PreviousFields": { "Balance": "2521054086" }
+          }
+        },
+        {
+          "DeletedNode": {
+            "FinalFields": {
+              "EmittedTxn": {
+                "Account": "rUncrjtPhAkxzmLEKVQFJowYvmXWn21E1S",
+                "TransactionType": "ClaimReward",
+                "Fee": "21",
+                "Flags": 0,
+                "Issuer": "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
+                "Sequence": 0
+              },
+              "Flags": 0,
+              "OwnerNode": "0"
+            },
+            "LedgerEntryType": "EmittedTxn",
+            "LedgerIndex": "3F9285B3E30969D1AD3AABABA5A27D03D68BBF9909FFA4F6A7F235CF17C0A6CA"
+          }
+        }
+      ],
+      "HookExecutions": [
+        {
+          "HookExecution": {
+            "HookAccount": "rUncrjtPhAkxzmLEKVQFJowYvmXWn21E1S",
+            "HookEmitCount": 0,
+            "HookExecutionIndex": 0,
+            "HookHash": "9F2B2E342FF4C65343980B7A9F78200B283D84732C1E80376A80A0E11628F7C6",
+            "HookInstructionCount": "1a",
+            "HookResult": 3,
+            "HookReturnCode": "0",
+            "HookReturnString": "4175746F5265776172643A2063616C6C6261636B20636F6D706C657465642E00",
+            "HookStateChangeCount": 0
+          }
+        }
+      ],
+      "TransactionIndex": 0,
+      "TransactionResult": "tesSUCCESS"
+    }
+  }
+}

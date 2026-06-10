@@ -150,16 +150,19 @@ export function createEvmDecoder(contract: ContractRef): Decoder {
   };
 }
 
-// Decoder nativo (AlphaNet XLS-0101).
-// [verificar] formato real del ABI on-chain; por ahora parsea los campos conocidos del tx_json.
+// Decoder nativo (Xahau / XRPL Hooks testnet).
+// Modelo real confirmado 2026-06-09: meta.HookExecutions[] — cada ejecución lleva
+// HookReturnString (hex UTF-8), HookResult (0-3), HookAccount, HookHash.
+// Ref: hooks-testnet-v3.xrpl-labs.com, tx 1254E6008564A51CB20A227DC567E04FA47AFE948F43B11697D9FE4F09EA1E5D
 export function createNativeDecoder(_contract: ContractRef): Decoder {
   return {
     decodeCall(raw: string): DecodedCall {
-      // raw es el campo HookParameters / Parameters del tx_json serializado como JSON string.
+      // raw = JSON-serializado del tx_json (TransactionType, Account, Fee, …).
       try {
         const tx = JSON.parse(raw) as Record<string, unknown>;
         const name = (tx.TransactionType as string | undefined) ?? 'ContractCall';
-        const { TransactionType: _t, hash: _h, ...rest } = tx;
+        // Omitir campos de firma/tecnicismos; conservar los semánticos.
+        const { TransactionType: _t, hash: _h, SigningPubKey: _s, TxnSignature: _ts, ...rest } = tx;
         return { name, args: rest as Record<string, unknown>, raw };
       } catch {
         return { name: 'ContractCall', args: { raw }, raw };
@@ -167,14 +170,51 @@ export function createNativeDecoder(_contract: ContractRef): Decoder {
     },
 
     decodeEvent(raw: unknown): ContractEvent {
-      // Eventos nativos: [verificar] estructura real en AlphaNet.
-      // Por ahora mapea campos conocidos del objeto de actividad.
-      const a = raw as Record<string, unknown>;
+      // raw = un objeto HookExecution del array meta.HookExecutions[].HookExecution.
+      // Campos opcionales _txHash y _ledgerIdx inyectados por traceNativeTx/watcher.
+      const he = raw as {
+        HookAccount?:        string;
+        HookHash?:           string;
+        HookResult?:         number;
+        HookReturnCode?:     string;
+        HookReturnString?:   string;
+        HookEmitCount?:      number;
+        HookExecutionIndex?: number;
+        HookStateChangeCount?: number;
+        _txHash?:            string;
+        _ledgerIdx?:         number;
+      };
+
+      // HookReturnString es hex ASCII; decodificar a UTF-8 y quitar null bytes.
+      const returnHex = he.HookReturnString ?? '';
+      let returnStr = returnHex;
+      if (/^[0-9a-fA-F]+$/.test(returnHex) && returnHex.length > 0) {
+        try {
+          returnStr = Buffer.from(returnHex, 'hex').toString('utf8').replace(/\0/g, '').trim();
+        } catch { /* fallback: dejar hex */ }
+      }
+
+      // HookResult: 0=hxsAgain(error), 1=hxsSuccess, 2=hxsFallback, 3=hxsEnd.
+      const RESULT_NAMES: Record<number, string> = {
+        0: 'hxsAgain', 1: 'hxsSuccess', 2: 'hxsFallback', 3: 'hxsEnd',
+      };
+      const hookResult = he.HookResult ?? 0;
+
       return {
-        name:    (a.txType as string | undefined) ?? 'ContractEvent',
-        args:    { contract: a.contract, txType: a.txType },
+        name:            'HookExecution',
+        args: {
+          hookAccount:   he.HookAccount ?? '',
+          hookHash:      String(he.HookHash ?? '').slice(0, 16) + '…',
+          result:        RESULT_NAMES[hookResult] ?? String(hookResult),
+          returnCode:    he.HookReturnCode ?? '0',
+          returnString:  returnStr,
+          emitCount:     he.HookEmitCount ?? 0,
+          stateChanges:  he.HookStateChangeCount ?? 0,
+        },
         raw,
-        txHash:  a.txHash as string | undefined,
+        txHash:          he._txHash,
+        contractAddress: he.HookAccount?.toLowerCase(),
+        ledgerOrBlock:   he._ledgerIdx,
       };
     },
   };

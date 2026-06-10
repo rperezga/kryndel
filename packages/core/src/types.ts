@@ -1,7 +1,7 @@
 // Kryndel — tipos compartidos para observabilidad de contratos.
 // Reemplaza los tipos del simulador de Hooks (ver legacy/hooks-sim/code/src/types.ts).
 
-export type Surface = 'evm' | 'native'; // EVM Sidechain (mainnet) | nativo (AlphaNet)
+export type Surface = 'evm' | 'native' | 'alphanet'; // EVM Sidechain (mainnet) | nativo (Hooks/Xahau)
 
 export interface ContractRef {
   surface: Surface;

@@ -1,8 +1,24 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import pc from 'picocolors';
+import type { Trace } from '@kryndel/core';
 
 const program = new Command();
+
+// Helper compartido para imprimir un Trace en el terminal.
+function printTrace(txHash: string, trace: Trace): void {
+  console.log(pc.bold('\n── Trace ──────────────────────────────────────'));
+  console.log(pc.dim('tx      '), txHash);
+  console.log(pc.dim('contract'), trace.contract.address);
+  console.log(pc.dim('call    '), pc.bold(trace.call?.name ?? '?'), JSON.stringify(trace.call?.args ?? {}).slice(0, 120));
+  console.log(pc.bold('\n── Eventos ─────────────────────────────────────'));
+  for (const ev of trace.events) {
+    const icon = ev.kind === 'call' ? '→' : ev.kind === 'event' ? '◆' : '✓';
+    console.log(pc.green(icon), pc.bold(ev.label), pc.dim(JSON.stringify(ev.data ?? {}).slice(0, 100)));
+  }
+  console.log(pc.bold('\n────────────────────────────────────────────────'));
+  console.log(pc.dim(`completado en ${trace.durationMs} ms`));
+}
 program
   .name('kryndel')
   .description('Observability & alerts for XRPL contracts (EVM Sidechain + native)')
@@ -149,11 +165,30 @@ program
   .option('--json', 'imprime el trace como JSON limpio (stdout)')
   .description('Decode one EVM transaction into a structured trace')
   .action(async (txHash: string, opts: { net: string; json?: boolean }) => {
-    if (opts.net !== 'evm') {
-      console.error(pc.yellow('ℹ trace nativo (AlphaNet) pendiente [verificar tipos de tx XLS-0101].'));
-      process.exit(2);
+
+    const { traceEvmTx, traceNativeTx } = await import('@kryndel/core');
+
+    // ── AlphaNet (Xahau / Hooks testnet) ─────────────────────────────────────
+    if (opts.net === 'alphanet' || opts.net === 'native') {
+      const endpoint = process.env.NATIVE_RPC_URL ?? 'https://hooks-testnet-v3.xrpl-labs.com';
+      if (!opts.json) {
+        console.log(pc.cyan(`trace ${txHash} --net alphanet`), pc.dim('→'), endpoint);
+      }
+      try {
+        const trace = await traceNativeTx(txHash, { endpoint });
+        if (opts.json) {
+          console.log(JSON.stringify(trace, null, 2));
+          return;
+        }
+        printTrace(txHash, trace);
+      } catch (e) {
+        console.error(pc.red('✖ trace nativo falló:'), (e as Error)?.message ?? String(e));
+        process.exit(1);
+      }
+      return;
     }
 
+    // ── EVM Sidechain ─────────────────────────────────────────────────────────
     const endpoint = process.env.EVM_RPC_URL;
     if (!endpoint || endpoint.includes('<')) {
       console.error(pc.red('✖ Falta EVM_RPC_URL en .env'));
@@ -164,30 +199,16 @@ program
       console.log(pc.cyan(`trace ${txHash} --net evm`), pc.dim('→'), endpoint);
     }
 
-    const { traceEvmTx } = await import('@kryndel/core');
-
     try {
       const trace = await traceEvmTx(txHash, { endpoint });
 
       if (opts.json) {
-        // Salida limpia para redirigir: kryndel trace <hash> --json > trace.json
         console.log(JSON.stringify(trace, (_k, v) =>
           typeof v === 'bigint' ? v.toString() : v, 2));
         return;
       }
 
-      // Salida legible para el terminal.
-      console.log(pc.bold('\n── Trace ──────────────────────────────────────'));
-      console.log(pc.dim('tx      '), txHash);
-      console.log(pc.dim('contract'), trace.contract.address);
-      console.log(pc.dim('call    '), pc.bold(trace.call?.name ?? '?'), JSON.stringify(trace.call?.args ?? {}).slice(0, 120));
-      console.log(pc.bold('\n── Eventos ─────────────────────────────────────'));
-      for (const ev of trace.events) {
-        const icon = ev.kind === 'call' ? '→' : ev.kind === 'event' ? '◆' : '✓';
-        console.log(pc.green(icon), pc.bold(ev.label), pc.dim(JSON.stringify(ev.data ?? {}).slice(0, 100)));
-      }
-      console.log(pc.bold('\n────────────────────────────────────────────────'));
-      console.log(pc.dim(`completado en ${trace.durationMs} ms`));
+      printTrace(txHash, trace);
     } catch (e) {
       console.error(pc.red('✖ trace falló:'), (e as Error)?.message ?? String(e));
       process.exit(1);
