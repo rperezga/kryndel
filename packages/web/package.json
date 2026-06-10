@@ -4,7 +4,18 @@
   "private": true,
   "description": "Kryndel explorer — Next.js x-ray for XRPL contracts (calls, events, emitted tx, watch button)",
   "scripts": {
-    "dev": "echo \"TODO: scaffold Next.js (next dev)\" && exit 0"
+    "dev":   "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000"
+  },
+  "dependencies": {
+    "next":      "^15.3.3",
+    "react":     "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/react":     "^19.1.6",
+    "@types/react-dom": "^19.1.5"
   },
   "license": "Apache-2.0"
 }

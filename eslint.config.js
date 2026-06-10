@@ -4,8 +4,8 @@ import prettierConfig from "eslint-config-prettier";
 
 export default [
   {
-    // Excluir código compilado y legado archivado (ver DELTA.md DEC-006)
-    ignores: ["packages/**/dist/**", "packages/**/legacy/**"],
+    // Excluir código compilado, legado archivado y paquete web (Next.js tiene su propio linter)
+    ignores: ["packages/**/dist/**", "packages/**/legacy/**", "packages/web/**"],
   },
   {
     files: ["packages/**/*.ts"],

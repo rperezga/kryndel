@@ -307,10 +307,43 @@ program
 
 program
   .command('web')
-  .description('Open the Next.js explorer (packages/web)')
-  .action(() => {
-    console.error(pc.yellow('TODO(Etapa 9): explorador Next.js en packages/web.'));
-    process.exit(2);
+  .option('--port <port>', 'puerto del servidor Next.js', '3000')
+  .description('Launch the Kryndel web explorer (Next.js dev server, requires MONGODB_URI)')
+  .action(async (opts: { port: string }) => {
+    const { spawn }        = await import('node:child_process');
+    const { dirname, resolve } = await import('node:path');
+    const { fileURLToPath }   = await import('node:url');
+
+    // Resolvemos packages/web relativo a este archivo compilado (packages/cli/dist/).
+    const __filename = fileURLToPath(import.meta.url);
+    const __dir      = dirname(__filename);
+    const webDir     = resolve(__dir, '..', '..', 'web');
+
+    if (!process.env.MONGODB_URI) {
+      console.error(pc.red('✖ Falta MONGODB_URI en .env — el explorador necesita MongoDB.'));
+      process.exit(1);
+    }
+
+    console.log(pc.cyan('kryndel web'), pc.dim(`→ http://localhost:${opts.port}`));
+    console.log(pc.dim(`  cwd: ${webDir}`));
+    console.log(pc.dim('  Ctrl+C para salir\n'));
+
+    const proc = spawn('pnpm', ['exec', 'next', 'dev', '--port', opts.port], {
+      cwd: webDir,
+      stdio: 'inherit',
+      env: { ...process.env },
+    });
+
+    proc.on('error', (e) => {
+      console.error(pc.red('✖'), e.message);
+      console.error(pc.dim('  ¿Instalaste las dependencias? Corre: pnpm install'));
+      process.exit(1);
+    });
+    proc.on('exit', (code) => process.exit(code ?? 0));
+
+    const shutdown = (): void => { proc.kill('SIGTERM'); };
+    process.on('SIGINT',  shutdown);
+    process.on('SIGTERM', shutdown);
   });
 
 program.parse();
