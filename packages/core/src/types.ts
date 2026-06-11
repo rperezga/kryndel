@@ -1,12 +1,13 @@
-// Kryndel — tipos compartidos para observabilidad de contratos.
-// Reemplaza los tipos del simulador de Hooks (ver legacy/hooks-sim/code/src/types.ts).
+// Kryndel — shared types for contract observability.
+// Replaces the old Hooks simulator types (see legacy/hooks-sim/code/src/types.ts).
 
-export type Surface = 'evm' | 'native' | 'alphanet'; // EVM Sidechain (mainnet) | nativo (Hooks/Xahau)
+/** Two valid surfaces: EVM Sidechain (mainnet) and XLS-0101 native contracts (AlphaNet). */
+export type Surface = 'evm' | 'native';
 
 export interface ContractRef {
   surface: Surface;
-  address: string;     // EVM: 0x...; nativo: pseudo-cuenta r... [verificar]
-  abi?: unknown;       // EVM: ABI estándar; nativo: ABI on-chain (XLS-0101) [verificar formato]
+  address: string;     // EVM: 0x…; native: pseudo-account r… (XLS-0101)
+  abi?: unknown;       // EVM: standard ABI; native: on-chain ABI (XLS-0101) [verificar format]
   label?: string;
 }
 
@@ -22,8 +23,8 @@ export interface ContractEvent {
   args: Record<string, unknown>;
   raw?: unknown;
   txHash?: string;
-  logIndex?: number;           // A2.1: para índice único (contract, txHash, name, logIndex)
-  contractAddress?: string;    // A2.4: address del contrato emisor — para matchesRule
+  logIndex?: number;           // A2.1: for unique index (contract, txHash, name, logIndex)
+  contractAddress?: string;    // A2.4: address of emitting contract — for matchesRule
   ledgerOrBlock?: number;
 }
 

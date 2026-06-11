@@ -1,17 +1,17 @@
 import { decodeFunctionData, decodeEventLog, type Abi } from 'viem';
 import type { ContractRef, DecodedCall, ContractEvent } from './types.js';
 
-// Decoder — traduce datos crudos a llamadas/eventos legibles.
-// EVM: viem decodeFunctionData / decodeEventLog con la ABI del contrato.
-// Nativo: ABI on-chain del ledger XLS-0101 [verificar disponibilidad en AlphaNet].
+// Decoder — translates raw data into readable calls/events.
+// EVM: viem decodeFunctionData / decodeEventLog with the contract ABI.
+// Native XLS-0101: on-chain ABI from the ledger [verificar availability on AlphaNet].
 
 export interface Decoder {
   decodeCall(raw: string): DecodedCall;
   decodeEvent(raw: unknown): ContractEvent;
 }
 
-// ABI mínima ERC-20 estándar. Cubre Transfer/Approval y las funciones más comunes.
-// Usa esta como fallback si el contrato no provee su propia ABI.
+// Minimal standard ERC-20 ABI. Covers Transfer/Approval and the most common functions.
+// Used as fallback if the contract does not provide its own ABI.
 export const ERC20_ABI = [
   // Events
   {
@@ -76,7 +76,7 @@ export const ERC20_ABI = [
   },
 ] as const satisfies Abi;
 
-// Convierte los args de viem (array | object) a un Record plano con valores serializables.
+// Converts viem args (array | object) to a flat Record with serializable values.
 function argsToRecord(args: readonly unknown[] | Record<string, unknown> | undefined): Record<string, unknown> {
   if (!args) return {};
   if (Array.isArray(args)) {
@@ -87,7 +87,7 @@ function argsToRecord(args: readonly unknown[] | Record<string, unknown> | undef
   );
 }
 
-// bigint → string para que sea serializable en JSON/MongoDB.
+// bigint → string for JSON/MongoDB serializability.
 function serializeArg(v: unknown): unknown {
   if (typeof v === 'bigint') return v.toString();
   if (Array.isArray(v)) return v.map(serializeArg);
@@ -97,8 +97,7 @@ function serializeArg(v: unknown): unknown {
   return v;
 }
 
-// EVM decoder usando la ABI del contrato (o ERC-20 estándar como fallback).
-// Falla silenciosamente: si un log no coincide con la ABI devuelve un objeto con el topic0 raw.
+/** EVM decoder using the contract ABI (or standard ERC-20 as fallback). */
 export function createEvmDecoder(contract: ContractRef): Decoder {
   const abi: Abi = (contract.abi as Abi | undefined) ?? ERC20_ABI;
 
@@ -118,7 +117,7 @@ export function createEvmDecoder(contract: ContractRef): Decoder {
         transactionHash?: string; blockNumber?: bigint;
         logIndex?: number; address?: string;
       };
-      // A2.1: propagar logIndex · A2.4: propagar contractAddress
+      // A2.1: propagate logIndex · A2.4: propagate contractAddress
       const logIndex = typeof log.logIndex === 'number' ? log.logIndex : undefined;
       const contractAddress = log.address?.toLowerCase();
       try {
@@ -150,18 +149,26 @@ export function createEvmDecoder(contract: ContractRef): Decoder {
   };
 }
 
-// Decoder nativo (Xahau / XRPL Hooks testnet).
-// Modelo real confirmado 2026-06-09: meta.HookExecutions[] — cada ejecución lleva
-// HookReturnString (hex UTF-8), HookResult (0-3), HookAccount, HookHash.
-// Ref: hooks-testnet-v3.xrpl-labs.com, tx 1254E6008564A51CB20A227DC567E04FA47AFE948F43B11697D9FE4F09EA1E5D
+/**
+ * Native XLS-0101 decoder stub.
+ *
+ * XLS-0101 contracts store their ABI on-chain; full decoding requires a live AlphaNet
+ * connection to fetch the Contract ledger entry. This stub is structurally complete —
+ * the hex→UTF-8 utility and Trace shape are in place — pending AlphaNet availability.
+ *
+ * The Xahau/HookExecutions model previously used here has been archived to
+ * extras/archivo/xahau-experiment/ (wrong network, wrong scope).
+ *
+ * [verificar: exact Contract ledger entry shape and ABI encoding once AlphaNet is stable]
+ */
 export function createNativeDecoder(_contract: ContractRef): Decoder {
   return {
     decodeCall(raw: string): DecodedCall {
-      // raw = JSON-serializado del tx_json (TransactionType, Account, Fee, …).
+      // raw = JSON-serialized tx_json (TransactionType, Account, Fee, …).
       try {
         const tx = JSON.parse(raw) as Record<string, unknown>;
         const name = (tx.TransactionType as string | undefined) ?? 'ContractCall';
-        // Omitir campos de firma/tecnicismos; conservar los semánticos.
+        // Drop signing/technical fields; keep semantic ones.
         const { TransactionType: _t, hash: _h, SigningPubKey: _s, TxnSignature: _ts, ...rest } = tx;
         return { name, args: rest as Record<string, unknown>, raw };
       } catch {
@@ -170,51 +177,22 @@ export function createNativeDecoder(_contract: ContractRef): Decoder {
     },
 
     decodeEvent(raw: unknown): ContractEvent {
-      // raw = un objeto HookExecution del array meta.HookExecutions[].HookExecution.
-      // Campos opcionales _txHash y _ledgerIdx inyectados por traceNativeTx/watcher.
-      const he = raw as {
-        HookAccount?:        string;
-        HookHash?:           string;
-        HookResult?:         number;
-        HookReturnCode?:     string;
-        HookReturnString?:   string;
-        HookEmitCount?:      number;
-        HookExecutionIndex?: number;
-        HookStateChangeCount?: number;
-        _txHash?:            string;
-        _ledgerIdx?:         number;
-      };
-
-      // HookReturnString es hex ASCII; decodificar a UTF-8 y quitar null bytes.
-      const returnHex = he.HookReturnString ?? '';
-      let returnStr = returnHex;
-      if (/^[0-9a-fA-F]+$/.test(returnHex) && returnHex.length > 0) {
+      // Placeholder: XLS-0101 eventEmitted shape [verificar once AlphaNet is available].
+      // The hex→UTF-8 utility is preserved below for reuse when the real model is confirmed.
+      const entry = raw as Record<string, unknown>;
+      const maybeHex = String(entry.data ?? entry.returnString ?? '');
+      let decoded = maybeHex;
+      if (/^[0-9a-fA-F]+$/.test(maybeHex) && maybeHex.length > 0) {
         try {
-          returnStr = Buffer.from(returnHex, 'hex').toString('utf8').replace(/\0/g, '').trim();
-        } catch { /* fallback: dejar hex */ }
+          decoded = Buffer.from(maybeHex, 'hex').toString('utf8').replace(/\0/g, '').trim();
+        } catch { /* keep hex fallback */ }
       }
-
-      // HookResult: 0=hxsAgain(error), 1=hxsSuccess, 2=hxsFallback, 3=hxsEnd.
-      const RESULT_NAMES: Record<number, string> = {
-        0: 'hxsAgain', 1: 'hxsSuccess', 2: 'hxsFallback', 3: 'hxsEnd',
-      };
-      const hookResult = he.HookResult ?? 0;
-
       return {
-        name:            'HookExecution',
-        args: {
-          hookAccount:   he.HookAccount ?? '',
-          hookHash:      String(he.HookHash ?? '').slice(0, 16) + '…',
-          result:        RESULT_NAMES[hookResult] ?? String(hookResult),
-          returnCode:    he.HookReturnCode ?? '0',
-          returnString:  returnStr,
-          emitCount:     he.HookEmitCount ?? 0,
-          stateChanges:  he.HookStateChangeCount ?? 0,
-        },
+        name:  (entry.eventName as string | undefined) ?? 'ContractEvent',
+        args:  { raw: decoded || maybeHex },
         raw,
-        txHash:          he._txHash,
-        contractAddress: he.HookAccount?.toLowerCase(),
-        ledgerOrBlock:   he._ledgerIdx,
+        txHash: entry._txHash as string | undefined,
+        ledgerOrBlock: entry._ledgerIdx as number | undefined,
       };
     },
   };

@@ -2,16 +2,16 @@ import { createPublicClient, http, type Abi } from 'viem';
 import { createEvmDecoder, ERC20_ABI } from './decoder.js';
 import type { ContractRef, Trace, TraceEvent, ContractEvent } from './types.js';
 
-// Tracer — obtiene el receipt de un tx (EVM o nativo Hooks) y produce un Trace estructurado.
+// Tracer — fetches a tx receipt (EVM or native XLS-0101) and produces a structured Trace.
 
 export interface TraceOptions {
   endpoint: string;  // EVM_RPC_URL
-  abi?: Abi;         // ABI del contrato (fallback: ERC-20 mínimo)
+  abi?: Abi;         // Contract ABI (fallback: minimal ERC-20)
 }
 
 /**
- * Descarga el receipt de un tx EVM, decodifica el input como call y cada log como event,
- * y devuelve un objeto Trace compatible con el explorador y el CLI.
+ * Downloads the receipt of an EVM tx, decodes the input as a call and each log as an event,
+ * and returns a Trace object compatible with the explorer and CLI.
  */
 export async function traceEvmTx(txHash: string, opts: TraceOptions): Promise<Trace> {
   const t0 = Date.now();
@@ -34,16 +34,16 @@ export async function traceEvmTx(txHash: string, opts: TraceOptions): Promise<Tr
 
   const decoder = createEvmDecoder(contractRef);
 
-  // Decodificar calldata del input.
-  // A2.10: fallback renombrado a "native value transfer" para no confundir con transfer() ERC-20.
+  // Decode calldata from input.
+  // A2.10: fallback renamed to "native value transfer" to avoid confusion with ERC-20 transfer().
   const decodedCall = tx.input && tx.input !== '0x'
     ? decoder.decodeCall(tx.input)
     : { name: 'native value transfer', args: { value: tx.value?.toString() ?? '0' }, raw: tx.input };
 
-  // A2.6: decodificar cada log etiquetando si es externo al contrato objetivo.
+  // A2.6: decode each log, marking events external to the target contract.
   const decodedEvents: ContractEvent[] = receipt.logs.map(log => decoder.decodeEvent(log));
 
-  // Construir el timeline de TraceEvent.
+  // Build the TraceEvent timeline.
   const events: TraceEvent[] = [
     {
       t: 0,
@@ -57,7 +57,7 @@ export async function traceEvmTx(txHash: string, opts: TraceOptions): Promise<Tr
       },
     },
     ...decodedEvents.map((ev, i): TraceEvent => {
-      // A2.6: etiquetar eventos de otros contratos como externos.
+      // A2.6: label events from other contracts as external.
       const isExternal = ev.contractAddress !== undefined &&
         ev.contractAddress !== contractAddress;
       return {
@@ -86,25 +86,35 @@ export async function traceEvmTx(txHash: string, opts: TraceOptions): Promise<Tr
     contract: contractRef,
     call: decodedCall,
     events,
-    emitted: [],   // EVM no produce sub-txs de Hooks; reservado para nativo.
-    stateDiff: [], // State diff requiere debug_traceTransaction [verificar soporte en XRPL EVM].
+    emitted: [],   // EVM does not produce Hook sub-txs; reserved for native.
+    stateDiff: [], // State diff requires debug_traceTransaction [verificar support on XRPL EVM].
     txHash,
     durationMs: Date.now() - t0,
   };
 }
 
-// ── Trace nativo (Xahau / XRPL Hooks testnet) ────────────────────────────────
+// ── Native XLS-0101 trace stub ────────────────────────────────────────────────
 //
-// Modelo real confirmado 2026-06-09 contra hooks-testnet-v3.xrpl-labs.com:
-//   meta.HookExecutions[]  → ejecuciones del Hook (resultado + returnString hex)
-//   meta.AffectedNodes[]   → DeletedNode{EmittedTxn} → txs emitidas por el Hook
+// XLS-0101 tx types to watch: ContractCreate, ContractCall, ContractModify, ContractDelete.
+// The watcher (watcher.ts) already filters these correctly.
 //
-// Llama al método `tx` del JSON-RPC de XRPL (POST https://…).
+// Full tracing requires a live AlphaNet endpoint to call the `tx` JSON-RPC method
+// and fetch the Contract ledger entry for ABI decoding.
+//
+// The Xahau/HookExecutions implementation previously here has been archived to
+// extras/archivo/xahau-experiment/ — it was built on the wrong network.
+//
+// [verificar: exact tx response shape and Contract ledger entry format once AlphaNet is stable]
 
 export interface NativeTraceOptions {
-  endpoint: string; // ej. https://hooks-testnet-v3.xrpl-labs.com
+  endpoint: string; // e.g. https://alphanet.rpc.nerdnest.xyz
 }
 
+/**
+ * Stub for XLS-0101 native contract tracing.
+ * Returns a minimal Trace with the raw tx data; full decoding pending AlphaNet availability.
+ * The structure (TraceEvent timeline, ContractRef, Trace) is final — only the data source changes.
+ */
 export async function traceNativeTx(txHash: string, opts: NativeTraceOptions): Promise<Trace> {
   const t0 = Date.now();
 
@@ -122,84 +132,38 @@ export async function traceNativeTx(txHash: string, opts: NativeTraceOptions): P
     throw new Error(`tx not found: ${String(result.error ?? result.error_message ?? txHash)}`);
   }
 
+  const contractAddress = (result.Account as string ?? txHash).toLowerCase();
+  const contractRef: ContractRef = { surface: 'native', address: contractAddress };
+
+  // Minimal timeline — call entry + result.
+  // Full decoder (Contract ledger entry → ABI → decoded args) is pending AlphaNet.
+  const txType = (result.TransactionType as string) ?? 'tx';
   const meta = result.meta as Record<string, unknown> | undefined;
-
-  // El contrato "origen" es el HookAccount del primer HookExecution (si hay).
-  const hookExecs = (meta?.HookExecutions as Array<{ HookExecution: Record<string, unknown> }> | undefined) ?? [];
-  const firstHookAccount = hookExecs[0]?.HookExecution?.HookAccount as string | undefined;
-  const contractAddress   = (firstHookAccount ?? result.Account as string ?? txHash).toLowerCase();
-
-  const contractRef: ContractRef = { surface: 'alphanet', address: contractAddress };
-  const events: TraceEvent[] = [];
-  let t = 0;
-
-  // 1. La llamada principal (el tx mismo).
-  events.push({
-    t: t++,
-    kind: 'call',
-    label: (result.TransactionType as string) ?? 'tx',
-    data: {
-      account:     result.Account,
-      fee:         result.Fee,
-      txType:      result.TransactionType,
-      ...(result.EmitDetails ? { emitParent: (result.EmitDetails as Record<string, unknown>).EmitParentTxnID } : {}),
-    },
-  });
-
-  // 2. HookExecutions → eventos decodificados.
-  for (const { HookExecution: he } of hookExecs) {
-    const returnHex = (he.HookReturnString as string) ?? '';
-    let returnStr = returnHex;
-    if (/^[0-9a-fA-F]+$/.test(returnHex) && returnHex.length > 0) {
-      try { returnStr = Buffer.from(returnHex, 'hex').toString('utf8').replace(/\0/g, '').trim(); }
-      catch { /* fallback hex */ }
-    }
-    const RESULT_NAMES: Record<number, string> = { 0: 'hxsAgain', 1: 'hxsSuccess', 2: 'hxsFallback', 3: 'hxsEnd' };
-    const hookResult = (he.HookResult as number) ?? 0;
-
-    events.push({
-      t: t++,
-      kind:  'event',
-      label: `HookExecution[${he.HookExecutionIndex ?? 0}]`,
-      data: {
-        hookAccount:  he.HookAccount,
-        hookHash:     String(he.HookHash ?? '').slice(0, 16) + '…',
-        result:       RESULT_NAMES[hookResult] ?? String(hookResult),
-        returnCode:   he.HookReturnCode,
-        returnString: returnStr,
-        emitCount:    he.HookEmitCount ?? 0,
-      },
-    });
-  }
-
-  // 3. EmittedTxn (DeletedNode en AffectedNodes) → emitidos por el Hook.
-  const affectedNodes = (meta?.AffectedNodes as Array<Record<string, unknown>> | undefined) ?? [];
-  for (const node of affectedNodes) {
-    const del = node.DeletedNode as Record<string, unknown> | undefined;
-    if (del?.LedgerEntryType === 'EmittedTxn') {
-      const fields  = del.FinalFields as Record<string, unknown> | undefined;
-      const emitted = fields?.EmittedTxn as Record<string, unknown> | undefined;
-      events.push({
-        t: t++,
-        kind:  'emit',
-        label: `EmittedTxn(${(emitted?.TransactionType as string) ?? '?'})`,
-        data:  { account: emitted?.Account, txType: emitted?.TransactionType, fee: emitted?.Fee },
-      });
-    }
-  }
-
-  // 4. Resultado final.
   const txResult = (meta?.TransactionResult as string) ?? 'unknown';
-  events.push({
-    t: t++,
-    kind:  'emit',
-    label: txResult === 'tesSUCCESS' ? 'tx_success' : 'tx_failed',
-    data:  { result: txResult, ledger: result.ledger_index ?? result.inLedger },
-  });
 
-  // La "call" del trace (datos resumidos del tx principal).
+  const events: TraceEvent[] = [
+    {
+      t: 0,
+      kind:  'call',
+      label: txType,
+      data:  {
+        account:     result.Account,
+        fee:         result.Fee,
+        txType,
+        ...(result.Amount      ? { amount: result.Amount }           : {}),
+        ...(result.Destination ? { destination: result.Destination } : {}),
+      },
+    },
+    {
+      t: 1,
+      kind:  'emit',
+      label: txResult === 'tesSUCCESS' ? 'tx_success' : 'tx_failed',
+      data:  { result: txResult, ledger: result.ledger_index ?? result.inLedger },
+    },
+  ];
+
   const call = {
-    name: (result.TransactionType as string) ?? 'tx',
+    name: txType,
     args: {
       account:     result.Account,
       fee:         result.Fee,

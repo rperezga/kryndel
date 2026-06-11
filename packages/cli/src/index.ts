@@ -168,9 +168,15 @@ program
 
     const { traceEvmTx, traceNativeTx } = await import('@kryndel/core');
 
-    // ── AlphaNet (Xahau / Hooks testnet) ─────────────────────────────────────
+    // ── AlphaNet (XLS-0101 native contracts) ────────────────────────────────
     if (opts.net === 'alphanet' || opts.net === 'native') {
-      const endpoint = process.env.NATIVE_RPC_URL ?? 'https://hooks-testnet-v3.xrpl-labs.com';
+      const endpoint = process.env.ALPHANET_RPC;
+      if (!endpoint) {
+        console.error(pc.red('✖ Falta ALPHANET_RPC en .env'));
+        console.error(pc.dim('  Añade: ALPHANET_RPC=https://alphanet.rpc.nerdnest.xyz'));
+        console.error(pc.dim('  Ver LIMITATIONS.md para el estado actual del endpoint AlphaNet.'));
+        process.exit(1);
+      }
       if (!opts.json) {
         console.log(pc.cyan(`trace ${txHash} --net alphanet`), pc.dim('→'), endpoint);
       }
