@@ -91,3 +91,13 @@ Do **not** assert unverified XRPL capabilities. Mark uncertain details `[verific
 - [ ] One real alert reaches Telegram
 - [ ] Tests pass, CI green; README with honest positioning & limits
 - [ ] Demo clip ≤40 s recorded and linked
+
+## ⛔ SCOPE GUARDRAILS — NON-NEGOTIABLE (added 2026-06-11 after Xahau deviation; see AUDIT-XAHAU.md)
+
+1. **Exactly two surfaces:**
+   - **XRPL native contracts: XLS-0101 (WASM)** on XRPL AlphaNet/Devnet.
+   - **XRPL EVM Sidechain** (mainnet).
+   **NOTHING ELSE.**
+2. **Xahau, classic Hooks, or any other network/fork: OUT OF SCOPE.** If they ever seem necessary: document the reason and **ASK Roger BEFORE acting.** Never substitute one surface for another network "because it's responding."
+3. **Blockers do not authorize scope changes.** If a network/endpoint is down: document the blocker with evidence, prioritize the other valid surface (EVM mainnet), declare the state honestly — and ask.
+4. **North star: complete Phase 1 and submit the grant application.** Every technical decision is evaluated with one question: **does this bring the grant submission closer or push it further away?**

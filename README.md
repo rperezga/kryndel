@@ -1,7 +1,7 @@
 # Kryndel
 
 > **Observability & alerts for XRPL programmable logic.**
-> Index, decode, trace and alert on deployed contracts — XRPL EVM Sidechain (mainnet) and Hooks (Xahau testnet).
+> Index, decode, trace and alert on deployed contracts — XRPL EVM Sidechain (mainnet) and native WASM contracts (XLS-0101, AlphaNet).
 
 [![CI](https://github.com/rperezga/kryndel/actions/workflows/ci.yml/badge.svg)](https://github.com/rperezga/kryndel/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
@@ -10,7 +10,7 @@
 
 ## What it does
 
-The XRPL now has a contract layer — the **EVM Sidechain** (mainnet, chain ID 1440002) and **native Hooks** (Xahau testnet). But there's no "Etherscan + monitor" for it: existing explorers don't decode contracts or alert.
+The XRPL now has a contract layer — the **EVM Sidechain** (mainnet, chain ID 1440002) and **native WASM contracts** (XLS-0101). But there's no "Etherscan + monitor" for it: existing explorers don't decode contracts or alert.
 
 Kryndel fills that gap:
 
@@ -45,7 +45,7 @@ node --env-file=.env packages/cli/dist/index.js watch 0x7C21a90E3eCD3215d16c3BBe
 # Decode a transaction into a structured trace
 node --env-file=.env packages/cli/dist/index.js trace 0x5c62e522... --net evm
 
-# Trace a native Hooks transaction
+# Trace a native XLS-0101 transaction (requires ALPHANET_WS configured)
 node --env-file=.env packages/cli/dist/index.js trace 1254E600... --net alphanet
 
 # Alert when a Transfer fires on a contract
@@ -58,35 +58,35 @@ node --env-file=.env packages/cli/dist/index.js watch --no-index
 ## Architecture
 
 ```
-EVM RPC ──┐
-           ├─▶  watcher  ─▶  decoder  ─▶  indexer (MongoDB)
-Hooks WS ─┘                      │
-                                  └─▶  subscriber  ─▶  alert (Telegram / webhook)
-                                  └─▶  tracer  ─▶  trace timeline
+EVM RPC ──────┐
+               ├─▶  watcher  ─▶  decoder  ─▶  indexer (MongoDB)
+AlphaNet WS ──┘  (XLS-0101)         │
+                                     └─▶  subscriber  ─▶  alert (Telegram / webhook)
+                                     └─▶  tracer  ─▶  trace timeline
 ```
 
 - **`packages/core`** — watcher, decoder, indexer, subscriber, alerts, tracer.
 - **`packages/cli`** — `kryndel` CLI (watch / trace / alert / web).
-- **`packages/web`** — Next.js explorer (Phase 1 M3, in progress).
+- **`packages/web`** — Next.js explorer (Phase 1 M1, in progress).
 
 ## Networks
 
 | Network | Status | RPC |
 |---|---|---|
 | XRPL EVM Sidechain (mainnet) | ✅ Live | `https://rpc.xrplevm.org` (chain ID 1440002) |
-| Xahau Hooks testnet | ✅ Live | `https://hooks-testnet-v3.xrpl-labs.com` |
+| XRPL native contracts — XLS-0101 (AlphaNet) | 🔧 In progress | AlphaNet endpoint — see [LIMITATIONS.md](LIMITATIONS.md) |
 
 ## Tests
 
 ```bash
 cd packages/core
 pnpm exec vitest run
-# 7 test files, 43 tests — all offline (fixtures in test/fixtures/)
+# 7 test files, 44 tests — all offline (fixtures in test/fixtures/)
 ```
 
 ## Honest limitations
 
-See [LIMITATIONS.md](LIMITATIONS.md) for the full list. Short version: no real-time filter subscriptions on the EVM RPC (we poll), no state diff, no REST API, no web explorer yet, native decoder returns Hook return strings only (no ABI on-chain for Hooks).
+See [LIMITATIONS.md](LIMITATIONS.md) for the full list. Short version: no real-time filter subscriptions on the EVM RPC (we poll), no state diff, no REST API, web explorer in progress, native XLS-0101 decoder pending AlphaNet availability.
 
 ## Contributing
 

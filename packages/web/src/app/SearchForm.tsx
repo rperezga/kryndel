@@ -12,7 +12,7 @@ export default function SearchForm() {
     const fd = new FormData(e.currentTarget);
     const address = (fd.get('address') as string | null)?.trim() ?? '';
     if (!validateAddress(address)) {
-      setError('Invalid address — EVM (0x… 40 hex) or Xahau rAddress (r…)');
+      setError('Invalid address — EVM (0x… 40 hex) or XLS-0101 native (r…)');
       return;
     }
     setError('');

@@ -19,7 +19,10 @@ Required env vars for local development:
 | `MONGODB_URI` | MongoDB Atlas M0 or local `mongodb://localhost:27017` |
 | `TELEGRAM_BOT_TOKEN` | Optional — only needed for `alert --to telegram` |
 | `TELEGRAM_CHAT_ID` | Optional — your Telegram chat ID |
-| `NATIVE_RPC_URL` | Optional — `https://hooks-testnet-v3.xrpl-labs.com` |
+| `ALPHANET_WS` | Optional — AlphaNet WebSocket for XLS-0101 native contracts |
+| `ALPHANET_RPC` | Optional — AlphaNet HTTP RPC for XLS-0101 native contracts |
+
+See [LIMITATIONS.md](LIMITATIONS.md) for current AlphaNet endpoint status.
 
 ## Build & test
 
@@ -47,9 +50,9 @@ All tests run offline (network calls are mocked with fixtures in `test/fixtures/
 ```
 type(scope): short description
 
-feat(core): add traceNativeTx for Hooks testnet
+feat(core): add XLS-0101 native decoder stub
 fix(alerts): escape Markdown in event names
-test(decoder): add decoder-native.test.ts with real fixture
+test(decoder): add decoder.test.ts with EVM fixture
 docs: update LIMITATIONS.md with AlphaNet status
 ```
 
@@ -65,4 +68,4 @@ Types: `feat`, `fix`, `test`, `docs`, `refactor`, `chore`.
 
 ## Scope (Phase 1 only)
 
-The current focus is closing Phase 1 for the XRPL Grants application. Out-of-scope for now: REST API, state diff (`debug_traceTransaction`), multi-chain indexing, auth layer. See `LIMITATIONS.md` for the honest list.
+The current focus is closing Phase 1 for the XRPL Grants application. Surfaces in scope: **XRPL EVM Sidechain (mainnet)** and **XLS-0101 native contracts (AlphaNet)**. Out-of-scope for now: Xahau/Hooks, REST API, state diff (`debug_traceTransaction`), multi-chain indexing, auth layer. See `LIMITATIONS.md` for the honest list.

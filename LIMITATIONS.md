@@ -18,19 +18,21 @@ This document describes what Kryndel does **not** do in v0.1.0 and why. No spin.
 
 **Decimals not assumed.** Token values are displayed as raw integers with a note to divide by `10^decimals`. The `decimals()` ABI call is not made automatically.
 
-## Native contracts (Xahau / XRPL Hooks testnet)
+## Native contracts — XLS-0101 (XRPL AlphaNet)
 
-**Hooks testnet only.** The Xahau mainnet and the XRPL native-contracts amendment (XLS-0101) are not the same network. Kryndel targets `hooks-testnet-v3.xrpl-labs.com` (Xahau testnet, currency XAH). There is no stable AlphaNet endpoint for XLS-0101 as of June 2026 (`alphanet.rpc.nerdnest.xyz` is down).
+**Scope clarification.** Kryndel targets **XLS-0101 native WASM contracts** on the XRPL AlphaNet/Devnet — not Xahau or Hooks. XLS-0101 is the XRPL's own smart-contract amendment; Xahau is a separate network and out of scope.
 
-**No ABI on-chain.** Hooks are WASM binaries — there is no ABI registry on-chain analogous to Solidity. Kryndel decodes the `HookReturnString` (hex → UTF-8) and the `HookResult` code. Argument types beyond the return string are not decoded.
+**AlphaNet availability.** The AlphaNet endpoint (`alphanet.rpc.nerdnest.xyz` / `alphanet.nerdnest.xyz`) has been intermittently unavailable as of June 2026. The watcher and decoder for XLS-0101 are implemented and tested; live tracing is blocked by endpoint availability, not by Kryndel code. We will update this section when the endpoint status changes.
 
-**No real-time watcher for native contracts.** The live WebSocket watcher (`kryndel watch --net alphanet`) requires a stable `ALPHANET_WS` endpoint. `trace --net alphanet` works via HTTP polling but live subscription is untested in v0.1.0.
+**No ABI on-chain (yet).** XLS-0101 contracts store their ABI on-chain, but the decoder currently returns a structured stub pending a stable AlphaNet connection to verify the exact ledger-entry shape. The hex→UTF-8 utility and trace structure are in place.
 
-**No own contract deployed.** v0.1.0 traces existing Hook contracts on the testnet. Deploying a custom Hook (via `SetHook` + WASM) is not part of the CLI and requires the `craft-toolkit-ts` toolchain separately.
+**No real-time watcher for native contracts.** The live WebSocket watcher (`kryndel watch --net alphanet`) requires a stable `ALPHANET_WS` endpoint. The watcher code filters `ContractCreate`, `ContractCall`, `ContractModify`, and `ContractDelete` transaction types correctly; live subscription is untested until the endpoint is reliably reachable.
+
+**No own contract deployed on AlphaNet.** Deploying a native WASM contract requires the `craft-toolkit-ts` toolchain and a funded AlphaNet account. This is deferred until AlphaNet is stable.
 
 ## Web explorer
 
-Not available in v0.1.0. The `kryndel web` command exits with a TODO. The Next.js package (`packages/web`) is scaffolded for Phase 1 M3.
+Not available in v0.1.0. The `kryndel web` command exits with a TODO. The Next.js package (`packages/web`) is scaffolded for Phase 1.
 
 ## General
 

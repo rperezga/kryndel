@@ -32,7 +32,7 @@ export default async function ContractPage({ params }: Props) {
   const db = await getDb();
   const addrLower = address.toLowerCase();
 
-  // Buscar en ambas formas (EVM lowercased, Xahau case-sensitive)
+  // Buscar en ambas formas (EVM lowercased, XLS-0101 native case-sensitive)
   const contract = await db.collection('contracts').findOne({
     $or: [{ address: addrLower }, { address }],
   });
