@@ -22,7 +22,7 @@ This document describes what Kryndel does **not** do in v0.1.0 and why. No spin.
 
 **Scope clarification.** Kryndel targets **XLS-0101 native WASM contracts** on the XRPL AlphaNet/Devnet — not Xahau or Hooks. XLS-0101 is the XRPL's own smart-contract amendment; Xahau is a separate network and out of scope.
 
-**AlphaNet availability.** The AlphaNet endpoint (`alphanet.rpc.nerdnest.xyz` / `alphanet.nerdnest.xyz`) has been intermittently unavailable as of June 2026. The watcher and decoder for XLS-0101 are implemented and tested; live tracing is blocked by endpoint availability, not by Kryndel code. We will update this section when the endpoint status changes.
+**AlphaNet availability (verified 2026-06-11).** The RPC endpoint `alphanet.rpc.nerdnest.xyz` returns Cloudflare error **526 (Invalid SSL Certificate)** — the server infrastructure is alive (the faucet at `alphanet.faucet.nerdnest.xyz` responds normally) but the certificate is invalid/expired, making the RPC and WebSocket endpoints unusable. The watcher and XLS-0101 decoder are implemented and unit-tested offline; live tracing is blocked by this external endpoint issue, not by Kryndel code. We will update this section when the endpoint is restored.
 
 **No ABI on-chain (yet).** XLS-0101 contracts store their ABI on-chain, but the decoder currently returns a structured stub pending a stable AlphaNet connection to verify the exact ledger-entry shape. The hex→UTF-8 utility and trace structure are in place.
 

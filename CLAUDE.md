@@ -86,7 +86,7 @@ Do **not** assert unverified XRPL capabilities. Mark uncertain details `[verific
 ## Phase exit criteria (before applying for the grant)
 
 - [ ] Public repo tagged `v0.1.0`
-- [ ] `kryndel trace` produces a decoded trace on ≥1 native (AlphaNet) and ≥1 EVM sidechain contract
+- [ ] `kryndel trace` produces a decoded trace on ≥1 EVM sidechain contract (native AlphaNet blocked by RPC 526 SSL issue — see LIMITATIONS.md)
 - [ ] Web explorer renders the x-ray
 - [ ] One real alert reaches Telegram
 - [ ] Tests pass, CI green; README with honest positioning & limits
