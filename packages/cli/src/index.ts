@@ -311,6 +311,8 @@ program
     process.on('SIGTERM', shutdown);
   });
 
+import { validatePort } from './utils.js';
+
 program
   .command('web')
   .option('--port <port>', 'puerto del servidor Next.js', '3000')
@@ -334,10 +336,19 @@ program
     console.log(pc.dim(`  cwd: ${webDir}`));
     console.log(pc.dim('  Ctrl+C para salir\n'));
 
-    const proc = spawn('pnpm', ['exec', 'next', 'dev', '--port', opts.port], {
+    // A10: validar port antes de pasar al proceso (usa función exportada y testeable).
+    let port: number;
+    try { port = validatePort(opts.port); }
+    catch { console.error(pc.red(`✖ Puerto inválido: ${opts.port} (1-65535)`)); process.exit(1); }
+
+    // A10: shell:true necesario en Windows donde pnpm es un .cmd (no un binario ELF).
+    // En Unix shell:true también funciona — no introduce riesgo de inyección porque los
+    // argumentos son literales controlados por el código, no por input externo.
+    const proc = spawn('pnpm', ['exec', 'next', 'dev', '--port', String(port)], {
       cwd: webDir,
       stdio: 'inherit',
       env: { ...process.env },
+      shell: true,
     });
 
     proc.on('error', (e) => {
