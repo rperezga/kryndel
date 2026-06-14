@@ -22,7 +22,7 @@ This document describes what Kryndel does **not** do in v0.1.0 and why. No spin.
 
 **Scope clarification.** Kryndel targets **XLS-0101 native WASM contracts** on the XRPL AlphaNet/Devnet — not Xahau or Hooks. XLS-0101 is the XRPL's own smart-contract amendment; Xahau is a separate network and out of scope.
 
-**AlphaNet availability (verified 2026-06-11).** The RPC endpoint `alphanet.rpc.nerdnest.xyz` returns Cloudflare error **526 (Invalid SSL Certificate)** — the server infrastructure is alive (the faucet at `alphanet.faucet.nerdnest.xyz` responds normally) but the certificate is invalid/expired, making the RPC and WebSocket endpoints unusable. The watcher and XLS-0101 decoder are implemented and unit-tested offline; live tracing is blocked by this external endpoint issue, not by Kryndel code. We will update this section when the endpoint is restored.
+**AlphaNet availability (re-verified 2026-06-14).** Both known RPC endpoints return Cloudflare error **526 (Invalid SSL Certificate)**: `alphanet.xrpl-labs.com` (tested 2026-06-11) and `alphanet.rpc.nerdnest.xyz` (tested 2026-06-14 via PowerShell `Invoke-RestMethod`). The watcher and XLS-0101 decoder are implemented and unit-tested offline with fixtures (see `packages/core/test/e2e-offline.test.ts`); live tracing is blocked by this external endpoint issue, not by Kryndel code. We will update this section when the endpoint is restored. Decision logged as DEC-011.
 
 **No ABI on-chain (yet).** XLS-0101 contracts store their ABI on-chain, but the decoder currently returns a structured stub pending a stable AlphaNet connection to verify the exact ledger-entry shape. The hex→UTF-8 utility and trace structure are in place.
 
@@ -32,7 +32,7 @@ This document describes what Kryndel does **not** do in v0.1.0 and why. No spin.
 
 ## Web explorer
 
-Not available in v0.1.0. The `kryndel web` command exits with a TODO. The Next.js package (`packages/web`) is scaffolded for Phase 1.
+Available in v0.1.1. The `kryndel web` command launches the Next.js explorer (requires `MONGODB_URI` in `.env`). Known limitation: on Windows, the command required `shell: true` in the spawn call — fixed in commit `e4cf74a`. The Next.js package (`packages/web`) is functional locally; public deployment (Vercel) is deferred (milestone C1).
 
 ## General
 
