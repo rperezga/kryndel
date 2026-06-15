@@ -6,6 +6,8 @@
 [![CI](https://github.com/rperezga/kryndel/actions/workflows/ci.yml/badge.svg)](https://github.com/rperezga/kryndel/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
+**[▶ Demo (34s) — trace · explorer · alerts on XRPL EVM Sidechain mainnet](https://youtu.be/nbY1uYgFMuw)**
+
 ---
 
 ## What it does
