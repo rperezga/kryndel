@@ -164,11 +164,11 @@ export function createEvmWatcher(opts: WatchOptions): Watcher {
 
       status('subscribed');
 
-      // Lookback fijo de LOOKBACK bloques en cada poll para garantizar fromBlock < toBlock.
-      // Dedup por "blockNumber:logIndex" para evitar emitir el mismo log dos veces.
-      const LOOKBACK = 5n;
+      // A2.6/blockHash: XRPL EVM RPC rechaza eth_getLogs con block range (fromBlock/toBlock).
+      // Workaround: obtener el latest block por tag y consultar sus logs por blockHash.
+      // Dedup por "blockHash:logIndex" para evitar emitir el mismo log dos veces.
       // A2.7: poda parcial — elimina la mitad más vieja al superar el límite.
-      // Evita re-emisión de logs aún visibles en el lookback tras un seen.clear() total.
+      let lastBlockHash: `0x${string}` | null = null;
       const seen = new Map<string, number>(); // key → orden de inserción
       let seenCounter = 0;
       const SEEN_MAX = 2_000;
@@ -176,15 +176,20 @@ export function createEvmWatcher(opts: WatchOptions): Watcher {
       const poll = async (): Promise<void> => {
         if (stopped) return;
         try {
-          const toBlock = await client.getBlockNumber();
-          const fromBlock = toBlock > LOOKBACK ? toBlock - LOOKBACK : 0n;
-          // XRPL EVM Sidechain rechaza eth_getLogs con address + block range simultáneos.
-          // Solución: consultar SIN address y filtrar client-side por contrato.
-          const logs = await client.getLogs({ fromBlock, toBlock });
-          for (const log of logs) {
-            if (stopped) break;
-            if (address && log.address.toLowerCase() !== address.toLowerCase()) continue;
-            const key = `${String(log.blockNumber)}:${String(log.logIndex)}`;
+          // Consultar 2 bloques atrás del latest para que CometBFT ya lo tenga indexado.
+          const latestNum = await client.getBlockNumber();
+          const targetNum = latestNum > 2n ? latestNum - 2n : latestNum;
+          const block = await client.getBlock({ blockNumber: targetNum });
+          if (!block.hash || block.hash === lastBlockHash) {
+            // Mismo bloque que el poll anterior — nada nuevo.
+          } else {
+            lastBlockHash = block.hash;
+            // XRPL EVM Sidechain acepta eth_getLogs por blockHash (sin range).
+            const logs = await client.getLogs({ blockHash: block.hash });
+            for (const log of logs) {
+              if (stopped) break;
+              if (address && log.address.toLowerCase() !== address.toLowerCase()) continue;
+              const key = `${block.hash}:${String(log.logIndex)}`;
             if (seen.has(key)) continue;
             seen.set(key, seenCounter++);
             // Poda parcial: al superar SEEN_MAX, borra la mitad más vieja.
@@ -202,7 +207,8 @@ export function createEvmWatcher(opts: WatchOptions): Watcher {
               raw: log,
               txHash: log.transactionHash ?? undefined,
             });
-          }
+            }
+          } // end else (new block)
         } catch (e) {
           status('error', (e as Error)?.message ?? String(e));
         }
