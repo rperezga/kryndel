@@ -19,6 +19,7 @@ import NextAuth from 'next-auth';
 import Resend from 'next-auth/providers/resend';
 import { MongoDBAdapter } from '@auth/mongodb-adapter';
 import { MongoClient } from 'mongodb';
+import { authConfig } from '@/auth.config';
 
 // NextAuth v5 needs its own MongoClient reference (separate from our app client).
 // We create a dedicated client here so the adapter lifecycle is self-contained.
@@ -39,6 +40,7 @@ const authClient: MongoClient =
     : getAuthClient();
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: MongoDBAdapter(authClient, {
     databaseName: 'kryndel',
     collections: {

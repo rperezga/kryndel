@@ -9,7 +9,7 @@ export async function register() {
     // Skip during build (MONGODB_URI may not be set in CI build step).
     if (!process.env.MONGODB_URI) return;
     try {
-      const { ensureIndexes } = await import('./lib/db.js');
+      const { ensureIndexes } = await import('./lib/db');
       await ensureIndexes();
     } catch (err) {
       // Non-fatal: app still starts, but indexes may be missing.

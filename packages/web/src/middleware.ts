@@ -1,24 +1,12 @@
 /**
  * Next.js middleware — protects /dashboard/* routes.
- * Unauthenticated requests are redirected to /login.
- * All other routes (public explorer, /api/auth/*) pass through.
+ * Uses Edge-safe auth config (no MongoDB / crypto imports).
+ * The authorized() callback in authConfig handles the redirect logic.
  */
-import { auth } from '@/auth';
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import NextAuth from 'next-auth';
+import { authConfig } from '@/auth.config';
 
-export default auth((req: NextRequest & { auth: unknown }) => {
-  const { pathname } = req.nextUrl;
-  const isAuthed = !!(req as { auth?: { user?: unknown } }).auth?.user;
-
-  if (pathname.startsWith('/dashboard') && !isAuthed) {
-    const loginUrl = new URL('/login', req.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  return NextResponse.next();
-});
+export const { auth: middleware } = NextAuth(authConfig);
 
 // Only run middleware on dashboard routes (not on static files, API, etc.)
 export const config = {
