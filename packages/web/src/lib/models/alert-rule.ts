@@ -7,7 +7,7 @@
  * Stored in MongoDB collection `alert_rules`.
  */
 import type { Collection, ObjectId } from 'mongodb';
-import { getDb } from '../db.js';
+import { getDb } from '../db';
 import type { Surface } from '@kryndel/core';
 
 // ── Types ─────────────────────────────────────────────────────────────────────

@@ -7,7 +7,7 @@
  */
 import { createHash, randomBytes } from 'node:crypto';
 import type { Collection, ObjectId } from 'mongodb';
-import { getDb } from '../db.js';
+import { getDb } from '../db';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

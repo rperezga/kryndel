@@ -4,7 +4,7 @@
  * Call from Server Components and API route handlers.
  */
 import { auth } from '@/auth';
-import { usersCollection } from './models/index.js';
+import { usersCollection } from './models/index';
 
 export async function currentUser() {
   const session = await auth();
