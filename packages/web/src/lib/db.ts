@@ -6,14 +6,11 @@
  * evita conexiones múltiples dentro del mismo proceso en dev y en worker.
  *
  * Las variables de entorno sin prefijo NEXT_PUBLIC_ son server-only.
+ *
+ * NOTE: env guard is lazy (inside getDb) so pure model helpers (PLAN_LIMITS,
+ * historyCutoff, etc.) can be imported in test environments without a real DB.
  */
 import { MongoClient, type Db } from 'mongodb';
-
-if (!process.env.MONGODB_URI) {
-  throw new Error('MONGODB_URI no está definida — añádela al .env local o a las variables de entorno.');
-}
-
-const uri = process.env.MONGODB_URI;
 
 // Connection pool: explicit limits to stay within Atlas M0 (100 connections).
 // Vercel serverless: each Lambda has its own pool; 10 concurrent lambdas × 10 = 100 — at the limit.
@@ -32,23 +29,33 @@ declare global {
   var _kryndelIndexesEnsured: boolean | undefined;
 }
 
-function makeClient(): MongoClient {
+function makeClient(uri: string): MongoClient {
   return new MongoClient(uri, opts);
 }
 
-let client: MongoClient;
+let _client: MongoClient | null = null;
 
-if (process.env.NODE_ENV === 'development') {
-  if (!global._kryndelMongoClient) {
-    global._kryndelMongoClient = makeClient();
+function getClient(): MongoClient {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    throw new Error('MONGODB_URI no está definida — añádela al .env local o a las variables de entorno.');
   }
-  client = global._kryndelMongoClient;
-} else {
-  client = makeClient();
+  if (_client) return _client;
+
+  if (process.env.NODE_ENV === 'development') {
+    if (!global._kryndelMongoClient) {
+      global._kryndelMongoClient = makeClient(uri);
+    }
+    _client = global._kryndelMongoClient;
+  } else {
+    _client = makeClient(uri);
+  }
+  return _client;
 }
 
 /** Connect lazily and return the named database (default: 'kryndel'). */
 export async function getDb(dbName = 'kryndel'): Promise<Db> {
+  const client = getClient();
   await client.connect(); // idempotent — no-op if already connected
   return client.db(dbName);
 }
@@ -101,7 +108,7 @@ async function _ensureIndexesImpl(): Promise<void> {
       { name: 'rules_userId' },
     ),
 
-    // ── contracts — add userId lookup (userId is optional; existing docs have none) ─
+    // ── contracts — add userId lookup ────────────────────────────────────────
     db.collection('contracts').createIndex(
       { userId: 1 },
       { sparse: true, name: 'contracts_userId' },
