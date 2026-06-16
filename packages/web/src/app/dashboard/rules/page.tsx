@@ -52,7 +52,7 @@ export default async function RulesPage({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contractAddress: (contractAddress as string).toLowerCase(),
-        surface: contract.surface ?? 'evm',
+        surface: (contract as { surface?: string }).surface ?? 'evm',
         eventName,
         channel: 'telegram',
         target,
