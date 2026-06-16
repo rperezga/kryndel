@@ -26,21 +26,28 @@ export default async function TxPage({ params }: Props) {
   const hashLower = hash.toLowerCase(); // EVM hashes son lowercase; XRPL son uppercase
 
   // Buscar en ambas casings
+  const txVariants = [hash, hashLower, hash.toUpperCase()];
+  const addrVariants = [addrLower, address];
+
   const [calls, events] = await Promise.all([
     db.collection('calls')
       .find({
-        $or: [{ contract: addrLower }, { contract: address }],
-        $or: [{ txHash: hash }, { txHash: hashLower }, { txHash: hash.toUpperCase() }],
-      } as object)
+        $and: [
+          { $or: addrVariants.map(v => ({ contract: v })) },
+          { $or: txVariants.map(v => ({ txHash: v })) },
+        ],
+      })
       .limit(1)
       .toArray(),
     db.collection('events')
       .find({
-        $or: [{ contract: addrLower }, { contract: address }],
-        $or: [{ txHash: hash }, { txHash: hashLower }, { txHash: hash.toUpperCase() }],
-      } as object)
+        $and: [
+          { $or: addrVariants.map(v => ({ contract: v })) },
+          { $or: txVariants.map(v => ({ txHash: v })) },
+        ],
+      })
       .sort({ logIndex: 1, indexedAt: 1 })
-      .limit(50) // A4.5: límite de paginación
+      .limit(50)
       .toArray(),
   ]);
 
