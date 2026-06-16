@@ -110,7 +110,7 @@ export default async function ContractPage({ params }: Props) {
                     <td><span className="call-name">{c.name as string}</span></td>
                     <td>
                       <span className="args-snippet">
-                        {JSON.stringify(c.args).slice(0, 80)}
+                        {JSON.stringify(c.args ?? {}).slice(0, 80)}
                       </span>
                     </td>
                     <td className="mono" style={{ color: 'var(--muted2)', fontSize: '.75rem' }}>
@@ -156,7 +156,7 @@ export default async function ContractPage({ params }: Props) {
                     <td><span className="event-name">{ev.name as string}</span></td>
                     <td>
                       <span className="args-snippet">
-                        {JSON.stringify(ev.args).slice(0, 80)}
+                        {JSON.stringify(ev.args ?? {}).slice(0, 80)}
                       </span>
                     </td>
                     <td className="mono" style={{ color: 'var(--muted2)', fontSize: '.75rem' }}>
