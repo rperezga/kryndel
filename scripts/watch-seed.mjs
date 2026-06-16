@@ -30,7 +30,17 @@ const DEFAULT_CONTRACTS = [
   '0x4ba8028bc62a1cecf98e2ba5da19c6a025485392', // LOOSH ERC-20
 ];
 
-const contracts = (process.env.CONTRACTS?.split(',').map((s) => s.trim()).filter(Boolean)) ?? DEFAULT_CONTRACTS;
+const requested = (process.env.CONTRACTS?.split(',').map((s) => s.trim()).filter(Boolean)) ?? DEFAULT_CONTRACTS;
+const isAddr = (a) => /^0x[0-9a-fA-F]{40}$/.test(a);
+const contracts = requested.filter((a) => {
+  if (isAddr(a)) return true;
+  console.warn(`  ⚠  dirección inválida, omitida: "${a}" (¿usaste el placeholder 0xTU_NUEVO?)`);
+  return false;
+});
+if (contracts.length === 0) {
+  console.error('❌  No hay direcciones válidas. Pasa contratos reales en CONTRACTS=0x…,0x…');
+  process.exit(1);
+}
 const minutes = Number(process.env.DURATION_MIN ?? 45);
 
 console.log(`▶  watch-seed: ${contracts.length} contrato(s) · ${minutes} min · ${endpoint}`);
