@@ -39,3 +39,21 @@ describe('native watcher — parseTransactionMessage', () => {
     expect(parseTransactionMessage('garbage')).toBeNull();
   });
 });
+
+// ── B9: EVM watcher backoff constants ────────────────────────────────────────
+// Tests sin red — solo validan las constantes exportadas y la lógica pura de backoff.
+import { POLL_BASE, POLL_MAX, nextEvmBackoff } from '../src/watcher.js';
+
+describe('[B9] EVM watcher — backoff exponencial en errores RPC', () => {
+  it('POLL_BASE es 4 s y POLL_MAX es 60 s', () => {
+    expect(POLL_BASE).toBe(4_000);
+    expect(POLL_MAX).toBe(60_000);
+  });
+
+  it('nextEvmBackoff duplica hasta POLL_MAX', () => {
+    expect(nextEvmBackoff(4_000)).toBe(8_000);
+    expect(nextEvmBackoff(8_000)).toBe(16_000);
+    expect(nextEvmBackoff(32_000)).toBe(60_000);  // 64000 → capped to 60000
+    expect(nextEvmBackoff(60_000)).toBe(60_000);  // ya en el máximo
+  });
+});

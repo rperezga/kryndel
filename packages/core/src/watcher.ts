@@ -172,9 +172,12 @@ export function createEvmWatcher(opts: WatchOptions): Watcher {
       const seen = new Map<string, number>(); // key → orden de inserción
       let seenCounter = 0;
       const SEEN_MAX = 2_000;
+      // B9: backoff exponencial en errores de RPC (POLL_BASE base, máx POLL_MAX, reset en éxito).
+      let pollBackoff = POLL_BASE;
 
       const poll = async (): Promise<void> => {
         if (stopped) return;
+        let delay = pollBackoff;
         try {
           // Consultar 2 bloques atrás del latest para que CometBFT ya lo tenga indexado.
           const latestNum = await client.getBlockNumber();
@@ -209,10 +212,16 @@ export function createEvmWatcher(opts: WatchOptions): Watcher {
             });
             }
           } // end else (new block)
+          // Éxito: resetear backoff.
+          pollBackoff = POLL_BASE;
+          delay = POLL_BASE;
         } catch (e) {
+          // B9: backoff exponencial — duplicar el intervalo hasta POLL_MAX.
           status('error', (e as Error)?.message ?? String(e));
+          delay = pollBackoff;
+          pollBackoff = Math.min(pollBackoff * 2, POLL_MAX);
         }
-        if (!stopped) timer = setTimeout(() => { void poll(); }, 4_000);
+        if (!stopped) timer = setTimeout(() => { void poll(); }, delay);
       };
 
       void poll();
@@ -226,3 +235,13 @@ export function createEvmWatcher(opts: WatchOptions): Watcher {
 }
 
 export type { ContractRef };
+
+// ── B9: Exported pure helpers for testing ───────────────────────────────────
+/** Base polling interval for the EVM watcher (ms). */
+export const POLL_BASE = 4_000;
+/** Maximum polling interval after repeated RPC errors (ms). */
+export const POLL_MAX  = 60_000;
+/** Pure helper: compute next backoff given current value. */
+export function nextEvmBackoff(current: number): number {
+  return Math.min(current * 2, POLL_MAX);
+}

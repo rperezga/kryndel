@@ -3,6 +3,10 @@ import { getDb } from '@/lib/db';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  // Gate: only available when KRYNDEL_DEBUG=true (never expose in production).
+  if (process.env.KRYNDEL_DEBUG !== 'true') {
+    return Response.json({ error: 'not found' }, { status: 404 });
+  }
   try {
     const db = await getDb();
     const [contracts, events, calls] = await Promise.all([

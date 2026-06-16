@@ -10,7 +10,9 @@ This document describes what Kryndel does **not** do in v0.1.0 and why. No spin.
 
 **No state diff.** `debug_traceTransaction` is not available on the public RPC. The `stateDiff` field in `Trace` is always empty.
 
-**Polling lag.** Alert latency is roughly the polling interval (6 s) plus processing time. Not suitable for latency-sensitive use cases.
+**Polling lag.** Alert latency is roughly the polling interval (~4 s) plus processing time. Not suitable for latency-sensitive use cases.
+
+**RPC error backoff.** The EVM watcher uses exponential backoff on consecutive RPC failures: starting at 4 s, doubling each time up to a ceiling of 60 s, then resetting to 4 s on the next successful poll. This prevents hammering a degraded endpoint but means alert latency can temporarily grow to 60 s during RPC instability.
 
 **Alerts are in-process.** Alert rules live in MongoDB and are evaluated in the same process as the watcher. There is no persistence of in-flight events across restarts (Phase 2 target: M4 — persistent queue).
 
