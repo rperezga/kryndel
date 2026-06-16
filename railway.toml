@@ -1,0 +1,20 @@
+# Railway deployment config for packages/worker.
+# The web Next.js app is deployed separately on Vercel.
+#
+# Required env vars (set in Railway dashboard — never commit):
+#   MONGODB_URI           — Atlas connection string
+#   TELEGRAM_BOT_TOKEN    — Telegram bot token for alerts
+#   EVM_RPC_URL           — XRPL EVM Sidechain RPC (default: https://rpc.xrplevm.org)
+#   NATIVE_WS_URL         — rippled/Clio WebSocket (default: wss://clio.xrpl-labs.com)
+#   RECONCILE_INTERVAL_MS — how often to sync contracts from DB (default: 30000)
+
+[build]
+builder    = "nixpacks"
+buildCommand = "npm install -g pnpm && pnpm install --frozen-lockfile && pnpm --filter @kryndel/core build && pnpm --filter @kryndel/worker build"
+
+[deploy]
+startCommand  = "node packages/worker/dist/main.js"
+healthcheckPath    = "/healthz"
+healthcheckTimeout = 30
+restartPolicyType  = "on_failure"
+restartPolicyMaxRetries = 5
