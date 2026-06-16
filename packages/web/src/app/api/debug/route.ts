@@ -1,0 +1,20 @@
+import { getDb } from '@/lib/db';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET() {
+  try {
+    const db = await getDb();
+    const [contracts, events, calls] = await Promise.all([
+      db.collection('contracts').countDocuments(),
+      db.collection('events').countDocuments(),
+      db.collection('calls').countDocuments(),
+    ]);
+    const uri = process.env.MONGODB_URI ?? 'NOT SET';
+    // Only expose cluster host, not credentials
+    const host = uri.replace(/mongodb\+srv:\/\/[^@]+@/, 'mongodb+srv://***@');
+    return Response.json({ host, contracts, events, calls });
+  } catch (err) {
+    return Response.json({ error: String(err) }, { status: 500 });
+  }
+}
