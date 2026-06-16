@@ -8,9 +8,11 @@ const config: NextConfig = {
     ignoreDuringBuilds: true,
   },
   typescript: {
-    // TypeScript check runs via Next's bundled tsc; suppress extra errors from missing root deps
     ignoreBuildErrors: false,
   },
+  // resend imports @react-email/render optionally — webpack can't resolve it.
+  // Marking resend as external lets Node.js load it at runtime instead of bundling it.
+  serverExternalPackages: ['resend'],
 };
 
 export default config;

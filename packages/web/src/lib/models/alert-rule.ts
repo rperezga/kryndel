@@ -8,7 +8,9 @@
  */
 import type { Collection, ObjectId } from 'mongodb';
 import { getDb } from '../db';
-import type { Surface } from '@kryndel/core';
+
+// Local re-definition to avoid importing @kryndel/core (not available in web's npm context).
+export type Surface = 'evm' | 'native';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
