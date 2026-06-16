@@ -7,6 +7,9 @@ import type { NextAuthConfig } from 'next-auth';
 
 export const authConfig: NextAuthConfig = {
   providers: [], // providers only needed on Node.js side
+  // JWT strategy: session encoded in a cookie — Edge middleware can verify it
+  // without a DB round-trip.  The MongoDB adapter still stores Users + Accounts.
+  session: { strategy: 'jwt' },
   pages: {
     signIn:        '/login',
     error:         '/login',

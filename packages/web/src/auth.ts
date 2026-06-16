@@ -81,22 +81,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
 
   callbacks: {
+    // JWT strategy: persist user id into the token on first sign-in.
+    jwt({ token, user }) {
+      if (user?.id) token.id = user.id;
+      return token;
+    },
     // Expose user id in the session object so API routes can use it directly.
-    session({ session, user }) {
-      if (session.user && user?.id) {
-        session.user.id = user.id;
+    session({ session, token }) {
+      if (session.user && token.id) {
+        session.user.id = token.id as string;
       }
       return session;
     },
   },
-
-  pages: {
-    signIn:  '/login',
-    // signOut: '/login',   // default redirect after sign-out (optional)
-    error:   '/login',    // show errors on the login page
-    verifyRequest: '/login/verify', // "check your email" page
-  },
-
-  // Trust the configured NEXTAUTH_URL for link generation.
-  trustHost: true,
 });
