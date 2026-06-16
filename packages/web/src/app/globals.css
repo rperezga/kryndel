@@ -18,6 +18,11 @@
   --body: "Hanken Grotesk", system-ui, sans-serif;
   --radius: 8px;
   --maxw: 1100px;
+
+  /* Aliases used by dashboard + login UI */
+  --accent:  #ffb454;
+  --surface: #0d1322;
+  --border:  rgba(120,150,230,.26);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
