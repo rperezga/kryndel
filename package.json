@@ -5,9 +5,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc --project packages/core/tsconfig.json && tsc --project packages/cli/tsconfig.json",
-    "test":  "vitest run",
-    "lint":  "eslint packages/"
+    "build": "tsc --project packages/core/tsconfig.json && tsc --project packages/cli/tsconfig.json && tsc --project packages/worker/tsconfig.json",
+    "test": "vitest run",
+    "lint": "eslint packages/"
   },
   "keywords": [
     "xrpl",
@@ -21,7 +21,9 @@
   ],
   "author": "Roger Pérez <rperezga@gmail.com>",
   "license": "Apache-2.0",
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "devEngines": {
     "packageManager": {
       "name": "pnpm",
