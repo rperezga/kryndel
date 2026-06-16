@@ -51,14 +51,14 @@ export default async function RulesPage({
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contractAddress: contractAddress.toLowerCase(),
+        contractAddress: (contractAddress as string).toLowerCase(),
         surface: contract.surface ?? 'evm',
         eventName,
         channel: 'telegram',
         target,
       }),
     });
-    redirect(`/dashboard/rules?contract=${encodeURIComponent(contractAddress)}`);
+    redirect(`/dashboard/rules?contract=${encodeURIComponent(contractAddress as string)}`);
   }
 
   return (
