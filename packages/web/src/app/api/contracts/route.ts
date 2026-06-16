@@ -3,10 +3,10 @@
  * POST /api/contracts  — register a new contract to watch (Free: max 3)
  */
 import { type NextRequest, NextResponse } from 'next/server';
-import { requireUser }        from '@/lib/current-user.js';
-import { getDb }              from '@/lib/db.js';
-import { PLAN_LIMITS }        from '@/lib/models/user.js';
-import { validateAddress }    from '@/lib/validate.js';
+import { requireUser }        from '@/lib/current-user';
+import { getDb }              from '@/lib/db';
+import { PLAN_LIMITS }        from '@/lib/models/user';
+import { validateAddress }    from '@/lib/validate';
 import { ObjectId }           from 'mongodb';
 
 export const dynamic = 'force-dynamic';

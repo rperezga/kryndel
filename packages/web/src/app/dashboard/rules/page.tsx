@@ -4,8 +4,8 @@
  */
 import { redirect }  from 'next/navigation';
 import { auth }      from '@/auth';
-import { getDb }     from '@/lib/db.js';
-import { usersCollection, PLAN_LIMITS } from '@/lib/models/index.js';
+import { getDb }     from '@/lib/db';
+import { usersCollection, PLAN_LIMITS } from '@/lib/models/index';
 import type { Metadata } from 'next';
 
 export const dynamic  = 'force-dynamic';

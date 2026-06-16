@@ -2,8 +2,8 @@
  * DELETE /api/contracts/[address] — remove a user's watched contract (and its rules)
  */
 import { type NextRequest, NextResponse } from 'next/server';
-import { requireUser } from '@/lib/current-user.js';
-import { getDb }       from '@/lib/db.js';
+import { requireUser } from '@/lib/current-user';
+import { getDb }       from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 

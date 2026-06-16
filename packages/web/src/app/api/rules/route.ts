@@ -4,9 +4,9 @@
  *   Free plan: 1 rule/contract, telegram channel only
  */
 import { type NextRequest, NextResponse } from 'next/server';
-import { requireUser }  from '@/lib/current-user.js';
-import { getDb }        from '@/lib/db.js';
-import { PLAN_LIMITS }  from '@/lib/models/user.js';
+import { requireUser }  from '@/lib/current-user';
+import { getDb }        from '@/lib/db';
+import { PLAN_LIMITS }  from '@/lib/models/user';
 import { ObjectId }     from 'mongodb';
 
 export const dynamic = 'force-dynamic';
