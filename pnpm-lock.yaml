@@ -313,6 +313,22 @@ importers:
         specifier: ^5.0.0
         version: 5.9.3
 
+  packages/worker:
+    dependencies:
+      '@kryndel/core':
+        specifier: workspace:*
+        version: link:../core
+      mongodb:
+        specifier: ^6.9.0
+        version: 6.21.0
+    devDependencies:
+      '@types/node':
+        specifier: ^20.17.6
+        version: 20.19.43
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
+
 packages:
 
   '@adraffy/ens-normalize@1.11.1':
