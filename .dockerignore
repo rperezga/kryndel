@@ -1,0 +1,25 @@
+# AUDIT-PA-2026-06-16 §B2 — keep secrets and build cruft out of the image.
+node_modules
+**/node_modules
+.git
+.gitignore
+.gitattributes
+.github
+.env
+.env.*
+**/.env
+**/.env.*
+.next
+**/.next
+dist
+**/dist
+coverage
+**/coverage
+*.log
+**/*.log
+.vscode
+.idea
+README.md
+LICENSE
+documentacion
+extras
