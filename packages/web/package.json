@@ -2,7 +2,7 @@
   "name": "@kryndel/web",
   "version": "0.1.0",
   "private": true,
-  "description": "Kryndel explorer — Next.js x-ray for XRPL contracts (calls, events, emitted tx, watch button)",
+  "description": "Kryndel explorer \u2014 Next.js x-ray for XRPL contracts (calls, events, emitted tx, watch button)",
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",
@@ -15,7 +15,8 @@
     "next-auth": "5.0.0-beta.31",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "resend": "^6.12.4"
+    "resend": "^6.12.4",
+    "stripe": "^17.7.0"
   },
   "devDependencies": {
     "@types/node": "^20.17.6",

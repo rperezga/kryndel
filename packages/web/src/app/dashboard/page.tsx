@@ -6,12 +6,18 @@ import { redirect }   from 'next/navigation';
 import { auth }       from '@/auth';
 import { getDb }      from '@/lib/db';
 import { usersCollection, PLAN_LIMITS, type Plan } from '@/lib/models/index';
+import BillingButtons from './BillingButtons';
 import type { Metadata } from 'next';
 
 export const dynamic  = 'force-dynamic';
 export const metadata: Metadata = { title: 'Dashboard' };
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ upgrade?: string }>;
+}) {
+  const upgrade = (await searchParams)?.upgrade;
   const session = await auth();
   if (!session?.user?.email) redirect('/login');
 
@@ -48,6 +54,7 @@ export default async function DashboardPage() {
               + Add contract
             </a>
           )}
+          <BillingButtons plan={plan} />
           <form action="/api/auth/signout" method="post">
             <button style={{ padding: '0.5rem 0.75rem', background: 'transparent', border: '1px solid var(--border)', borderRadius: 4, color: 'var(--muted)', fontSize: '0.8125rem', cursor: 'pointer' }}>
               Sign out
@@ -55,6 +62,18 @@ export default async function DashboardPage() {
           </form>
         </div>
       </div>
+
+      {/* Upgrade flow feedback */}
+      {upgrade === 'success' && (
+        <div style={{ marginBottom: '1rem', padding: '0.75rem 1rem', background: '#064e3b22', border: '1px solid #065f46', borderRadius: 6, fontSize: '0.875rem', color: '#86efac' }}>
+          🎉 Upgrade complete. Your account is now on the Pro plan.
+        </div>
+      )}
+      {upgrade === 'cancel' && (
+        <div style={{ marginBottom: '1rem', padding: '0.75rem 1rem', background: '#78350f22', border: '1px solid #92400e', borderRadius: 6, fontSize: '0.875rem', color: '#fcd34d' }}>
+          Upgrade canceled. No charges were made.
+        </div>
+      )}
 
       {/* Plan limit warning */}
       {atLimit && (
