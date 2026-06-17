@@ -9,8 +9,8 @@
 #   RECONCILE_INTERVAL_MS — how often to sync contracts from DB (default: 30000)
 
 [build]
-builder    = "nixpacks"
-buildCommand = "npm install -g pnpm && pnpm install --no-frozen-lockfile && pnpm --filter @kryndel/core build && pnpm --filter @kryndel/worker build"
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand  = "node packages/worker/dist/main.js"
