@@ -5,7 +5,7 @@
 import { redirect }   from 'next/navigation';
 import { auth }       from '@/auth';
 import { getDb }      from '@/lib/db';
-import { usersCollection, PLAN_LIMITS } from '@/lib/models/index';
+import { usersCollection, PLAN_LIMITS, type Plan } from '@/lib/models/index';
 import type { Metadata } from 'next';
 
 export const dynamic  = 'force-dynamic';
@@ -25,7 +25,8 @@ export default async function DashboardPage() {
     .sort({ createdAt: -1 })
     .toArray();
 
-  const plan   = user.plan ?? 'free';
+  // B4: narrow plan to the union before indexing PLAN_LIMITS
+  const plan: Plan = user.plan === 'pro' ? 'pro' : 'free';
   const limits = PLAN_LIMITS[plan];
   const atLimit = contracts.length >= limits.maxContracts;
 

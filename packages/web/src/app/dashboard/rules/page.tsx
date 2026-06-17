@@ -1,11 +1,17 @@
 /**
  * /dashboard/rules — manage alert rules for a contract.
  * Expects ?contract=<address> query param.
+ *
+ * 2026-06-17 PA-SMOKE fix: the Server Action used to call its own /api/rules
+ * via internal fetch, which did NOT propagate the session cookie — every
+ * submission returned 401 Unauthorized.  The action now lives in actions.ts
+ * and does the auth check + MongoDB write directly.
  */
-import { redirect }  from 'next/navigation';
-import { auth }      from '@/auth';
-import { getDb }     from '@/lib/db';
-import { usersCollection, PLAN_LIMITS } from '@/lib/models/index';
+import { redirect }   from 'next/navigation';
+import { auth }       from '@/auth';
+import { getDb }      from '@/lib/db';
+import { addRule }    from './actions';
+import { usersCollection, PLAN_LIMITS, type Plan } from '@/lib/models/index';
 import type { Metadata } from 'next';
 
 export const dynamic  = 'force-dynamic';
@@ -37,29 +43,13 @@ export default async function RulesPage({
     .sort({ createdAt: -1 })
     .toArray();
 
-  const plan   = user.plan ?? 'free';
-  const limits = PLAN_LIMITS[plan];
+  // B4: narrow plan to the union before indexing PLAN_LIMITS
+  const plan: Plan = user.plan === 'pro' ? 'pro' : 'free';
+  const limits     = PLAN_LIMITS[plan];
   const atRuleLimit = rules.length >= limits.maxRulesPerContract;
 
-  async function addRule(formData: FormData) {
-    'use server';
-    const eventName = (formData.get('eventName') as string ?? '').trim();
-    const target    = (formData.get('target')    as string ?? '').trim();
-
-    const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
-    await fetch(`${baseUrl}/api/rules`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contractAddress: (contractAddress as string).toLowerCase(),
-        surface: (contract as { surface?: string }).surface ?? 'evm',
-        eventName,
-        channel: 'telegram',
-        target,
-      }),
-    });
-    redirect(`/dashboard/rules?contract=${encodeURIComponent(contractAddress as string)}`);
-  }
+  // The Server Action expects the contract address as its first arg; bind it.
+  const addRuleForThis = addRule.bind(null, contractAddress as string);
 
   return (
     <main style={{ maxWidth: 700, margin: '2rem auto', padding: '0 1rem' }}>
@@ -97,7 +87,7 @@ export default async function RulesPage({
       {!atRuleLimit ? (
         <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: '1rem' }}>
           <h2 style={{ margin: '0 0 1rem', fontSize: '1rem' }}>Add rule</h2>
-          <form action={addRule} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <form action={addRuleForThis} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
               <label style={{ fontSize: '0.8125rem', color: 'var(--muted)' }}>Event name</label>
               <input name="eventName" required placeholder="Transfer" type="text"
