@@ -1,4 +1,4 @@
-FROM node:22-slim
+FROM node:22.13-slim
 WORKDIR /app
 
 # Install pnpm v11 (matches local dev, reads the lockfile format correctly)
