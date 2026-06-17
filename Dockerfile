@@ -1,4 +1,4 @@
-FROM node:20-slim
+FROM node:22-slim
 WORKDIR /app
 
 # Install pnpm v11 (matches local dev, reads the lockfile format correctly)
@@ -13,7 +13,7 @@ COPY packages/cli/package.json     ./packages/cli/
 COPY packages/viewer/package.json  ./packages/viewer/
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Copy source
 COPY . .
