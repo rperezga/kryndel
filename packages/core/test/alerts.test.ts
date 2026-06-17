@@ -1,37 +1,69 @@
-import { describe, it, expect } from 'vitest';
-import { escapeMarkdown, formatAlert, validateWebhookTarget } from '../src/alerts.js';
+import { describe, it, expect, vi } from 'vitest';
+
+// Mock DNS so SSRF assertions in dispatchers don't hit the network.
+vi.mock('node:dns/promises', () => ({
+  lookup: vi.fn(async (host: string) => {
+    const t: Record<string, Array<{ address: string; family: number }>> = {
+      'hooks.slack.com':           [{ address: '52.85.151.10',  family: 4 }],
+      'discord.com':               [{ address: '162.159.135.232', family: 4 }],
+    };
+    const entry = t[host];
+    if (!entry) {
+      const err: any = new Error('ENOTFOUND ' + host);
+      err.code = 'ENOTFOUND';
+      throw err;
+    }
+    return entry;
+  }),
+}));
+
+import {
+  escapeMarkdown,
+  escapeMarkdownV2,
+  formatAlert,
+  validateWebhookTarget,
+} from '../src/alerts.js';
 import type { ContractEvent, AlertRule } from '../src/types.js';
 
-// ── escapeMarkdown ────────────────────────────────────────────────────────────
-describe('escapeMarkdown', () => {
-  it('escapa caracteres especiales de Telegram Markdown v1', () => {
-    expect(escapeMarkdown('hello_world')).toBe('hello\\_world');
-    expect(escapeMarkdown('*bold*')).toBe('\\*bold\\*');
-    expect(escapeMarkdown('`code`')).toBe('\\`code\\`');
-    expect(escapeMarkdown('[link](url)')).toBe('\\[link\\](url)'); // ] también escapado
+// ── escapeMarkdownV2 (canonical) ──────────────────────────────────────────────
+describe('escapeMarkdownV2 — M3 (AUDIT-PA §M3)', () => {
+  it('escapes all 18 Telegram MarkdownV2 special chars', () => {
+    // _ * [ ] ( ) ~ ` > # + - = | { } . ! and backslash
+    const allSpecials = '_*[]()~`>#+-=|{}.!\\';
+    const escaped = escapeMarkdownV2(allSpecials);
+    // each special char becomes \<char>
+    for (const ch of allSpecials) {
+      expect(escaped).toContain('\\' + ch);
+    }
   });
 
-  it('no modifica texto sin caracteres especiales', () => {
-    expect(escapeMarkdown('Transfer')).toBe('Transfer');
-    expect(escapeMarkdown('0xabcdef')).toBe('0xabcdef');
+  it('escapes parentheses (v1 did NOT)', () => {
+    expect(escapeMarkdownV2('(url)')).toBe('\\(url\\)');
   });
 
-  // A2.2 CA: evento con nombre de inyección produce mensaje inocuo
-  it('A2.2 — inyección de Markdown es neutralizada', () => {
-    const evil: ContractEvent = {
-      name: '*[click](https://evil)*',
-      args: { to: '0x1', value: '100' },
-      contractAddress: '0xabc',
-    };
-    const rule: AlertRule = {
-      id: '1', contract: '0xabc', event: evil.name,
-      channel: 'telegram', target: '123',
-    };
-    const msg = formatAlert(evil, rule);
-    // El mensaje NO debe contener Markdown activo sin escape (el link no debe renderizar)
-    expect(msg).not.toMatch(/\*\[click\]\(https:\/\/evil\)\*/);
-    // El contenido sí debe aparecer, pero con * y [ y ] escapados
-    expect(msg).toContain('\\*\\[click\\]');
+  it('escapes period (used in URLs)', () => {
+    expect(escapeMarkdownV2('foo.bar')).toBe('foo\\.bar');
+  });
+
+  it('neutralizes inline-link injection [t](u)', () => {
+    const evil = '*[click](https://evil.com)*';
+    const e = escapeMarkdownV2(evil);
+    // Bracket, paren, period and asterisk all escaped → no live MarkdownV2
+    expect(e).toContain('\\[');
+    expect(e).toContain('\\]');
+    expect(e).toContain('\\(');
+    expect(e).toContain('\\)');
+    expect(e).toContain('\\*');
+    expect(e).toContain('\\.');
+  });
+
+  it('leaves plain text alone', () => {
+    expect(escapeMarkdownV2('Transfer')).toBe('Transfer');
+    expect(escapeMarkdownV2('0xabcdef')).toBe('0xabcdef');
+  });
+
+  it('escapeMarkdown is a v2 alias (back-compat)', () => {
+    expect(escapeMarkdown('foo_bar')).toBe(escapeMarkdownV2('foo_bar'));
   });
 });
 
@@ -42,7 +74,7 @@ describe('formatAlert', () => {
     channel: 'telegram', target: '999',
   };
 
-  it('formato Transfer incluye from, to, valor raw', () => {
+  it('Transfer format includes from, to and raw value', () => {
     const ev: ContractEvent = {
       name: 'Transfer',
       args: { from: '0xsender0000', to: '0xreceiver00', value: '1000000000000000000' },
@@ -50,11 +82,11 @@ describe('formatAlert', () => {
     };
     const msg = formatAlert(ev, rule);
     expect(msg).toContain('Transfer');
-    expect(msg).toContain('raw'); // A2.12: muestra valor raw + nota
-    expect(msg).toContain('0xsender'); // address parcial
+    expect(msg).toContain('raw');
+    expect(msg).toContain('0xsender');
   });
 
-  it('formato genérico para eventos no-Transfer', () => {
+  it('generic format for non-Transfer events', () => {
     const ev: ContractEvent = {
       name: 'Staked',
       args: { amount: '500', user: '0xuser' },
@@ -63,36 +95,51 @@ describe('formatAlert', () => {
     expect(msg).toContain('Staked');
     expect(msg).toContain('amount');
   });
+
+  it('A2.2 — markdown injection in event name is neutralized', () => {
+    const evil: ContractEvent = {
+      name: '*[click](https://evil)*',
+      args: { to: '0x1', value: '100' },
+      contractAddress: '0xabc',
+    };
+    const r: AlertRule = {
+      id: '1', contract: '0xabc', event: evil.name,
+      channel: 'telegram', target: '123',
+    };
+    const msg = formatAlert(evil, r);
+    expect(msg).not.toContain('*[click](https://evil)*');
+    expect(msg).toContain('\\*\\[click\\]');
+  });
 });
 
-// ── validateWebhookTarget ────────────────────────────────────────────────────
-describe('validateWebhookTarget — A2.11 SSRF prevention', () => {
-  it('acepta URLs https:// públicas válidas', () => {
+// ── validateWebhookTarget (sync IP-literal guard) ────────────────────────────
+describe('validateWebhookTarget — A2.11 sync guard (back-compat)', () => {
+  it('accepts public https://', () => {
     expect(() => validateWebhookTarget('https://hooks.slack.com/T123/B456')).not.toThrow();
     expect(() => validateWebhookTarget('https://discord.com/api/webhooks/123/abc')).not.toThrow();
   });
 
-  it('rechaza http://', () => {
+  it('rejects http://', () => {
     expect(() => validateWebhookTarget('http://example.com/hook')).toThrow('https://');
   });
 
-  it('rechaza localhost', () => {
+  it('rejects localhost', () => {
     expect(() => validateWebhookTarget('https://localhost/hook')).toThrow('private');
   });
 
-  it('rechaza 127.0.0.1', () => {
+  it('rejects 127.0.0.1', () => {
     expect(() => validateWebhookTarget('https://127.0.0.1/hook')).toThrow('private');
   });
 
-  it('rechaza redes privadas 10.x', () => {
+  it('rejects private 10.x', () => {
     expect(() => validateWebhookTarget('https://10.0.0.1/hook')).toThrow('private');
   });
 
-  it('rechaza link-local 169.254.x (metadata AWS/GCP)', () => {
+  it('rejects link-local 169.254.x (AWS/GCP metadata)', () => {
     expect(() => validateWebhookTarget('https://169.254.169.254/latest/meta-data')).toThrow('private');
   });
 
-  it('rechaza URL malformada', () => {
+  it('rejects malformed URL', () => {
     expect(() => validateWebhookTarget('not-a-url')).toThrow('Invalid');
   });
 });

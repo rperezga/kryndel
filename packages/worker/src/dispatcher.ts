@@ -3,11 +3,15 @@
  *
  * Security:
  * - All on-chain data treated as attacker-controlled; sanitized before sending.
- * - Webhook targets validated: must be https:// (SSRF guard).
- * - escapeMarkdown() from @kryndel/core used for Telegram messages.
+ * - Webhook targets validated at dispatch time with assertSafePublicUrl() —
+ *   the worker is the actor that actually issues the outbound fetch, so it
+ *   gets the final say (defence-in-depth against rules created with an older
+ *   guard).  See AUDIT-PA-2026-06-16 §A2.
+ * - escapeMarkdownV2() from @kryndel/core used for Telegram messages with
+ *   parse_mode 'MarkdownV2' — covers all v2 special chars (§M3).
  */
 import type { ContractActivity } from '@kryndel/core';
-import { escapeMarkdown, validateWebhookTarget } from '@kryndel/core';
+import { escapeMarkdownV2, assertSafePublicUrl } from '@kryndel/core';
 import type { WAlertRule } from './types.js';
 
 // ── Telegram ─────────────────────────────────────────────────────────────────
@@ -22,7 +26,7 @@ async function sendTelegram(chatId: string, text: string): Promise<void> {
   const res = await fetch(url, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }),
+    body:    JSON.stringify({ chat_id: chatId, text, parse_mode: 'MarkdownV2' }),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
@@ -33,8 +37,8 @@ async function sendTelegram(chatId: string, text: string): Promise<void> {
 // ── Webhook ───────────────────────────────────────────────────────────────────
 
 async function sendWebhook(url: string, payload: Record<string, unknown>): Promise<void> {
-  // Validate before every send — rule may have been created before guard was tightened.
-  validateWebhookTarget(url); // throws on invalid
+  // Final defence — rules may predate the tightened guard.
+  await assertSafePublicUrl(url);
   const res = await fetch(url, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -48,7 +52,7 @@ async function sendWebhook(url: string, payload: Record<string, unknown>): Promi
 // ── Discord ───────────────────────────────────────────────────────────────────
 
 async function sendDiscord(webhookUrl: string, content: string): Promise<void> {
-  validateWebhookTarget(webhookUrl);
+  await assertSafePublicUrl(webhookUrl);
   const res = await fetch(webhookUrl, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -62,24 +66,23 @@ async function sendDiscord(webhookUrl: string, content: string): Promise<void> {
 // ── Format helpers ────────────────────────────────────────────────────────────
 
 function formatActivity(activity: ContractActivity, contract: string): string {
-  const addr = escapeMarkdown(contract.slice(0, 10));
+  const addr = escapeMarkdownV2(contract.slice(0, 10));
   if (activity.kind === 'event') {
-    const name = escapeMarkdown(activity.name ?? 'UnknownEvent');
-    const hash = activity.txHash ? `\n🔗 Tx: \`${escapeMarkdown(activity.txHash.slice(0, 16))}…\`` : '';
+    const name = escapeMarkdownV2(activity.name ?? 'UnknownEvent');
+    const hash = activity.txHash
+      ? `\n🔗 Tx: \`${escapeMarkdownV2(activity.txHash.slice(0, 16))}…\``
+      : '';
     return `🔔 *Kryndel Alert*\n📄 Contrato: \`${addr}…\`\n⚡ Evento: *${name}*${hash}`;
   }
-  // kind === 'call'
-  const txType = escapeMarkdown(activity.txType ?? 'unknown');
-  const hash   = activity.txHash ? `\n🔗 Tx: \`${escapeMarkdown(activity.txHash.slice(0, 16))}…\`` : '';
+  const txType = escapeMarkdownV2(activity.txType ?? 'unknown');
+  const hash   = activity.txHash
+    ? `\n🔗 Tx: \`${escapeMarkdownV2(activity.txHash.slice(0, 16))}…\``
+    : '';
   return `🔔 *Kryndel Alert*\n📄 Contrato: \`${addr}…\`\n📞 Call: *${txType}*${hash}`;
 }
 
 // ── Main dispatch ─────────────────────────────────────────────────────────────
 
-/**
- * Dispatch an activity to all matching active rules.
- * Rules are already filtered by contract address and surface at reconcile time.
- */
 export async function dispatch(
   activity:  ContractActivity,
   rules:     WAlertRule[],
@@ -87,7 +90,6 @@ export async function dispatch(
 ): Promise<void> {
   const matchingRules = rules.filter((r) => {
     if (!r.active) return false;
-    // eventName '*' matches any; otherwise must match activity name/txType
     if (r.eventName !== '*') {
       const actName = activity.kind === 'event' ? activity.name : activity.txType;
       if (actName !== r.eventName) return false;
@@ -120,7 +122,6 @@ export async function dispatch(
             break;
           }
           case 'email': {
-            // PA-billing: Resend email dispatch — deferred to PA-billing session.
             console.log(`[dispatcher] email channel not yet implemented for rule ${rule._id}`);
             break;
           }

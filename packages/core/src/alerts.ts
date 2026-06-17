@@ -1,19 +1,32 @@
 import type { AlertRule, ContractEvent } from './types.js';
+import { assertSafePublicUrl } from './ssrf.js';
 
 // Alerts — despacha notificaciones cuando una regla dispara. Telegram primero.
 export interface AlertDispatcher {
   dispatch(event: ContractEvent, rule: AlertRule): Promise<void>;
 }
 
-// A2.2: escapa caracteres especiales de Telegram Markdown v1.
-// Aplica a TODO dato on-chain (event.name, args, addresses) — son input de atacantes.
-export function escapeMarkdown(s: string): string {
-  // Telegram MarkdownV1: _ * ` [ ] necesitan escape para evitar inyección.
-  return s.replace(/[_*`[\]]/g, '\\$&');
+// ── escapeMarkdownV2 — full Telegram MarkdownV2 escape ──────────────────────
+//
+// Telegram MarkdownV2 (https://core.telegram.org/bots/api#markdownv2-style)
+// requires escaping ALL of these in body text:
+//   _ * [ ] ( ) ~ ` > # + - = | { } . !
+// Plus literal backslash.
+//
+// M3 (AUDIT-PA-2026-06-16): the old v1 version only covered `_ * \` [ ]`,
+// leaving `()` `~` `>` `#` `+` `-` `=` `|` `{}` `.` `!` exploitable for
+// visual phishing via inline links `[text](url)`. v2 closes that.
+export function escapeMarkdownV2(s: string): string {
+  return s.replace(/[\\_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
 }
 
-// A2.11: valida targets de webhook/discord — SSRF prevention.
-// Exige https:// y rechaza IPs privadas / localhost.
+// Back-compat alias. The CLI dispatcher uses parse_mode MarkdownV2 too now,
+// so this is just the same function under both names.
+export const escapeMarkdown = escapeMarkdownV2;
+
+// A2.11 / AUDIT-PA §A2 — sync IP-literal check (no DNS). Kept for callers
+// that need a synchronous guard (legacy CLI tests). For dispatch-time fetch
+// sites use `assertSafePublicUrl` (async, includes DNS resolution).
 export function validateWebhookTarget(target: string): void {
   let url: URL;
   try {
@@ -32,7 +45,7 @@ export function validateWebhookTarget(target: string): void {
     /^10\./.test(hostname) ||
     /^172\.(1[6-9]|2\d|3[01])\./.test(hostname) ||
     /^192\.168\./.test(hostname) ||
-    /^169\.254\./.test(hostname) // link-local / SSRF via metadata
+    /^169\.254\./.test(hostname)
   ) {
     throw new Error(`Webhook URL targets a private/localhost address: ${hostname}`);
   }
@@ -41,44 +54,41 @@ export function validateWebhookTarget(target: string): void {
 // A2.12: muestra valor crudo + nota de decimales en lugar de asumir 18.
 function formatValue(raw: unknown): string {
   if (raw === undefined || raw === null) return '?';
-  // Devuelve el valor crudo con nota; no asumimos decimales.
   return `${String(raw)} (raw — divide por 10^decimals del contrato)`;
 }
 
 // Formatea el mensaje de alerta con emoji + datos del evento.
-// Todos los datos on-chain pasan por escapeMarkdown() — son input de atacantes.
+// Todos los datos on-chain pasan por escapeMarkdownV2() — son input de atacantes.
 export function formatAlert(event: ContractEvent, rule: AlertRule): string {
   const args = event.args;
 
-  // Formato especial para Transfer ERC-20.
   if (event.name === 'Transfer' && args.from && args.to) {
     return [
       `🔔 *Kryndel Alert*`,
-      `📄 Contrato: \`${escapeMarkdown(rule.contract.slice(0, 10))}…\``,
-      `⚡ Evento: *${escapeMarkdown(event.name)}*`,
-      `➡️ De: \`${escapeMarkdown(String(args.from).slice(0, 10))}…\``,
-      `➡️ A:  \`${escapeMarkdown(String(args.to).slice(0, 10))}…\``,
-      `💰 Valor: \`${escapeMarkdown(formatValue(args.value))}\``,
-      event.txHash ? `🔗 Tx: \`${escapeMarkdown(event.txHash.slice(0, 16))}…\`` : '',
+      `📄 Contrato: \`${escapeMarkdownV2(rule.contract.slice(0, 10))}…\``,
+      `⚡ Evento: *${escapeMarkdownV2(event.name)}*`,
+      `➡️ De: \`${escapeMarkdownV2(String(args.from).slice(0, 10))}…\``,
+      `➡️ A:  \`${escapeMarkdownV2(String(args.to).slice(0, 10))}…\``,
+      `💰 Valor: \`${escapeMarkdownV2(formatValue(args.value))}\``,
+      event.txHash ? `🔗 Tx: \`${escapeMarkdownV2(event.txHash.slice(0, 16))}…\`` : '',
     ].filter(Boolean).join('\n');
   }
 
-  // Formato genérico para cualquier otro evento.
   const argsStr = Object.entries(args)
     .slice(0, 4)
-    .map(([k, v]) => `  ${escapeMarkdown(k)}: \`${escapeMarkdown(String(v).slice(0, 40))}\``)
+    .map(([k, v]) => `  ${escapeMarkdownV2(k)}: \`${escapeMarkdownV2(String(v).slice(0, 40))}\``)
     .join('\n');
 
   return [
     `🔔 *Kryndel Alert*`,
-    `📄 Contrato: \`${escapeMarkdown(rule.contract.slice(0, 10))}…\``,
-    `⚡ Evento: *${escapeMarkdown(event.name)}*`,
+    `📄 Contrato: \`${escapeMarkdownV2(rule.contract.slice(0, 10))}…\``,
+    `⚡ Evento: *${escapeMarkdownV2(event.name)}*`,
     argsStr,
-    event.txHash ? `🔗 Tx: \`${escapeMarkdown(event.txHash.slice(0, 16))}…\`` : '',
+    event.txHash ? `🔗 Tx: \`${escapeMarkdownV2(event.txHash.slice(0, 16))}…\`` : '',
   ].filter(Boolean).join('\n');
 }
 
-// Dispatcher de Telegram — usa fetch nativo (Node ≥ 18).
+// Dispatcher de Telegram — usa fetch nativo (Node ≥ 18) y MarkdownV2 (M3).
 export function createTelegramDispatcher(botToken: string): AlertDispatcher {
   const base = `https://api.telegram.org/bot${botToken}`;
 
@@ -92,7 +102,7 @@ export function createTelegramDispatcher(botToken: string): AlertDispatcher {
         body: JSON.stringify({
           chat_id:    rule.target,
           text,
-          parse_mode: 'Markdown',
+          parse_mode: 'MarkdownV2',
         }),
       });
 
@@ -108,7 +118,8 @@ export function createTelegramDispatcher(botToken: string): AlertDispatcher {
 export function createDiscordDispatcher(): AlertDispatcher {
   return {
     async dispatch(event: ContractEvent, rule: AlertRule): Promise<void> {
-      validateWebhookTarget(rule.target); // A2.11
+      // A2 / AUDIT-PA §A2: defence-in-depth at dispatch (DNS-aware).
+      await assertSafePublicUrl(rule.target);
       const text = formatAlert(event, rule).replace(/[*`]/g, '**');
       const res = await fetch(rule.target, {
         method:  'POST',
@@ -124,7 +135,8 @@ export function createDiscordDispatcher(): AlertDispatcher {
 export function createWebhookDispatcher(): AlertDispatcher {
   return {
     async dispatch(event: ContractEvent, rule: AlertRule): Promise<void> {
-      validateWebhookTarget(rule.target); // A2.11
+      // A2 / AUDIT-PA §A2: defence-in-depth at dispatch (DNS-aware).
+      await assertSafePublicUrl(rule.target);
       const res = await fetch(rule.target, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
