@@ -1,0 +1,17 @@
+# nixpacks.toml — override Nixpacks auto-detected phases for Railway worker deploy.
+# Without this, Nixpacks runs "pnpm i --frozen-lockfile" which fails on this monorepo.
+
+[phases.install]
+cmds = [
+  "npm install -g pnpm",
+  "pnpm install --no-frozen-lockfile"
+]
+
+[phases.build]
+cmds = [
+  "pnpm --filter @kryndel/core build",
+  "pnpm --filter @kryndel/worker build"
+]
+
+[start]
+cmd = "node packages/worker/dist/main.js"
