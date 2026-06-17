@@ -44,10 +44,17 @@ export function createMongoIndexer(uri: string, dbName = 'kryndel'): Indexer {
         { contract: 1, txHash: 1 },
         { unique: true, sparse: true, background: true },
       );
-      await db.collection('contracts').createIndex(
-        { address: 1, surface: 1 },
-        { unique: true, background: true },
-      );
+      // [hist] PRE-PA-core el CLI creaba aquí un índice UNIQUE GLOBAL
+      // sobre (address, surface). Era válido para uso single-user del CLI
+      // pero rompe el modelo multi-usuario de Kryndel Cloud — bloquea que dos
+      // cuentas registren el mismo contrato (E11000 duplicate key).
+      // Se elimina su creación. La unicidad ahora vive en la collection web,
+      // donde es compuesta (userId, address, surface). El upsertContract de
+      // este indexer (legacy CLI) hace upsert por filtro y no necesita índice
+      // único para funcionar.
+      // Documentación operacional: Roger debe limpiar los índices sueltos
+      // (address_1, surface_1, address_1_surface_1) en Atlas Data Explorer si
+      // sobreviven de despliegues antiguos. Ver LOG 2026-06-17 §smoke-e2e.
     }
     return db;
   }

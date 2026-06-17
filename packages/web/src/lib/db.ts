@@ -108,10 +108,25 @@ async function _ensureIndexesImpl(): Promise<void> {
       { name: 'rules_userId' },
     ),
 
-    // ── contracts — add userId lookup ────────────────────────────────────────
+    // ── contracts — per-user lookup + uniqueness ────────────────────────────
+    // sparse: docs antiguos del pipeline CLI (sin userId) quedan fuera del
+    // índice. Útil para queries por userId.
     db.collection('contracts').createIndex(
       { userId: 1 },
       { sparse: true, name: 'contracts_userId' },
+    ),
+    // PA-BILLING (2026-06-17): unicidad por usuario en lugar de global.
+    // Permite que dos cuentas vigilen el mismo contrato sin chocar; previene
+    // duplicados accidentales dentro de la misma cuenta. partialFilterExpression
+    // limita el índice a docs que realmente tienen userId (compatibilidad con
+    // huérfanos sin userId si quedaran).
+    db.collection('contracts').createIndex(
+      { userId: 1, address: 1, surface: 1 },
+      {
+        unique: true,
+        name:   'contracts_userId_address_surface_unique',
+        partialFilterExpression: { userId: { $exists: true } },
+      },
     ),
 
     // ── events — TTL: 90 days global cleanup to keep Atlas M0 storage bounded.
