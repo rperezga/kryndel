@@ -2,12 +2,23 @@
  * GET  /api/rules  — list authenticated user's alert rules
  * POST /api/rules  — create an alert rule
  *   Free plan: 1 rule/contract, telegram channel only
+ *
+ * Security (AUDIT-PA-2026-06-16):
+ *   • A2: assertSafePublicUrl() for webhook/discord targets — DNS-aware SSRF
+ *         guard that blocks private IPs, link-local (incl. cloud metadata),
+ *         and hostnames that resolve into those ranges.
+ *   • M1: insert-then-verify keeps the plan gate atomic against concurrent
+ *         requests (rolls the new doc back if a parallel insert pushed the
+ *         user past the limit).
+ *   • M4: sanitizeKeys() strips `$` / `.` from the user-supplied `filter`
+ *         object before it lands in MongoDB.
+ *   • B4: plan narrowed to the literal union before indexing PLAN_LIMITS.
  */
 import { type NextRequest, NextResponse } from 'next/server';
-import { requireUser }  from '@/lib/current-user';
-import { getDb }        from '@/lib/db';
-import { PLAN_LIMITS }  from '@/lib/models/user';
-import { ObjectId }     from 'mongodb';
+import { requireUser }            from '@/lib/current-user';
+import { getDb }                  from '@/lib/db';
+import { PLAN_LIMITS, type Plan } from '@/lib/models/user';
+import { assertSafePublicUrl, sanitizeKeys } from '@/lib/ssrf';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,7 +58,7 @@ export async function POST(req: NextRequest) {
   const eventName       = body?.eventName?.trim() ?? '';
   const channel         = body?.channel   ?? 'telegram';
   const target          = body?.target?.trim() ?? '';
-  const filter          = body?.filter ?? undefined;
+  const rawFilter       = body?.filter ?? undefined;
 
   // Basic validation
   if (!contractAddress) {
@@ -60,8 +71,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'target is required.' }, { status: 400 });
   }
 
-  const plan   = user.plan ?? 'free';
-  const limits = PLAN_LIMITS[plan];
+  // B4: narrow `plan` to the union before indexing PLAN_LIMITS.
+  const plan: Plan = user.plan === 'pro' ? 'pro' : 'free';
+  const limits     = PLAN_LIMITS[plan];
 
   // PA.4 gating — channel must be allowed on this plan
   if (!limits.channels.includes(channel)) {
@@ -71,13 +83,21 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Webhook URL must be https:// (SSRF guard — app/CLAUDE.md security rules)
-  if (channel === 'webhook' && !target.startsWith('https://')) {
-    return NextResponse.json(
-      { error: 'Webhook target must be an https:// URL.' },
-      { status: 400 },
-    );
+  // A2: DNS-aware SSRF guard for webhook/discord targets
+  if (channel === 'webhook' || channel === 'discord') {
+    try {
+      await assertSafePublicUrl(target);
+    } catch (e) {
+      return NextResponse.json({ error: (e as Error).message }, { status: 400 });
+    }
   }
+
+  // M4: sanitize the user-supplied `filter` object — strip $/. from keys
+  // recursively, otherwise an attacker could embed MongoDB operators that
+  // would be honoured if `filter` is ever passed to a `.find()` query.
+  const filter = rawFilter && typeof rawFilter === 'object'
+    ? sanitizeKeys(rawFilter) as Record<string, unknown>
+    : undefined;
 
   const db = await getDb();
 
@@ -92,17 +112,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // PA.4 gating — max rules per contract
-  const ruleCount = await db.collection('alert_rules').countDocuments({
-    userId: user._id, contractAddress,
-  });
-  if (ruleCount >= limits.maxRulesPerContract) {
-    return NextResponse.json(
-      { error: `${plan} plan allows ${limits.maxRulesPerContract} rule(s) per contract.` },
-      { status: 403 },
-    );
-  }
-
+  // M1: insert-then-verify. The pre-insert count was a TOCTOU window.
+  // Insert first, count after — if the count exceeds the limit, roll the
+  // new doc back. Two concurrent requests still race, but only one wins.
   const now = new Date();
   const doc = {
     userId: user._id,
@@ -118,6 +130,18 @@ export async function POST(req: NextRequest) {
   };
 
   const result = await db.collection('alert_rules').insertOne(doc);
+
+  const ruleCount = await db.collection('alert_rules').countDocuments({
+    userId: user._id, contractAddress,
+  });
+  if (ruleCount > limits.maxRulesPerContract) {
+    await db.collection('alert_rules').deleteOne({ _id: result.insertedId });
+    return NextResponse.json(
+      { error: `${plan} plan allows ${limits.maxRulesPerContract} rule(s) per contract.` },
+      { status: 403 },
+    );
+  }
+
   return NextResponse.json(
     { rule: { _id: result.insertedId, ...doc }, created: true },
     { status: 201 },
