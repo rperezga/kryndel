@@ -10,7 +10,7 @@
 
 [build]
 builder    = "nixpacks"
-buildCommand = "npm install -g pnpm && pnpm install --frozen-lockfile && pnpm --filter @kryndel/core build && pnpm --filter @kryndel/worker build"
+buildCommand = "npm install -g pnpm && pnpm install --no-frozen-lockfile && pnpm --filter @kryndel/core build && pnpm --filter @kryndel/worker build"
 
 [deploy]
 startCommand  = "node packages/worker/dist/main.js"
