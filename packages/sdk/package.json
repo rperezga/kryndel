@@ -1,0 +1,17 @@
+{
+  "name": "@kryndel/sdk",
+  "version": "0.1.0",
+  "description": "Official Kryndel API client",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^3.0.0"
+  },
+  "license": "Apache-2.0"
+}
