@@ -136,6 +136,48 @@ async function _ensureIndexesImpl(): Promise<void> {
       { createdAt: 1 },
       { expireAfterSeconds: 90 * 24 * 60 * 60, name: 'events_createdAt_ttl_90d' },
     ),
+
+    // ── api_keys — PB-core (2026-06-17) ──────────────────────────────────────
+    db.collection('api_keys').createIndex(
+      { keyHash: 1 },
+      { unique: true, name: 'api_keys_keyHash_unique' },
+    ),
+    db.collection('api_keys').createIndex(
+      { userId: 1 },
+      { name: 'api_keys_userId' },
+    ),
+
+    // ── rate_limit_windows — PB-core (2026-06-17) ─────────────────────────────
+    // TTL: auto-expire windows after 120s (2 windows).
+    db.collection('rate_limit_windows').createIndex(
+      { keyId: 1, windowStart: 1 },
+      { name: 'rate_limit_windows_keyId_windowStart' },
+    ),
+    db.collection('rate_limit_windows').createIndex(
+      { createdAt: 1 },
+      { expireAfterSeconds: 120, name: 'rate_limit_windows_createdAt_ttl_120s' },
+    ),
+
+    // ── webhook_endpoints — PB-core (2026-06-17) ──────────────────────────────
+    db.collection('webhook_endpoints').createIndex(
+      { userId: 1 },
+      { name: 'webhook_endpoints_userId' },
+    ),
+
+    // ── webhook_deliveries — PB-core (2026-06-17) — TTL 30 days ──────────────
+    db.collection('webhook_deliveries').createIndex(
+      { endpointId: 1, createdAt: -1 },
+      { name: 'webhook_deliveries_endpointId_createdAt' },
+    ),
+    db.collection('webhook_deliveries').createIndex(
+      { createdAt: 1 },
+      { expireAfterSeconds: 30 * 24 * 60 * 60, name: 'webhook_deliveries_createdAt_ttl_30d' },
+    ),
+    // Index for retry loop
+    db.collection('webhook_deliveries').createIndex(
+      { status: 1, nextRetryAt: 1 },
+      { name: 'webhook_deliveries_status_nextRetryAt', sparse: true },
+    ),
   ]);
 
   console.log('[kryndel/db] indexes ensured');
