@@ -1,14 +1,19 @@
 /**
- * WatcherPool — manages a set of live Watcher instances.
+ * WatcherPool -- manages a set of live Watcher instances.
  *
  * Keeps a Map<contractKey, Watcher> where contractKey = `${surface}:${address}`.
  * sync() is called by the reconcile loop: starts new watchers, stops removed ones.
  * Watcher events are forwarded to the provided onActivity callback.
+ *
+ * PB-core: after dispatching alerts, also triggers deliverWebhooks for
+ * outbound signed delivery to user-registered webhook endpoints.
  */
 import { createEvmWatcher, createNativeWatcher } from '@kryndel/core';
 import type { Watcher, ContractActivity } from '@kryndel/core';
 import type { WContract, WAlertRule } from './types.js';
-import { dispatch } from './dispatcher.js';
+import { dispatch }          from './dispatcher.js';
+import { deliverWebhooks }   from './webhook-deliverer.js';
+import { getDb }             from './db.js';
 
 export type ActivityHandler = (
   activity:  ContractActivity,
@@ -65,9 +70,18 @@ export class WatcherPool {
 
       watcher.start(async (activity) => {
         const rules = rulesByContract.get(key) ?? [];
+
+        // 1. Dispatch alert rules (Telegram/Discord/webhook alerts)
         await dispatch(activity, rules, contract.address).catch((e) =>
           console.error(`[pool] dispatch error for ${key}:`, e),
         );
+
+        // 2. Deliver to outbound webhook endpoints (PB-core)
+        getDb().then((db) =>
+          deliverWebhooks(db, contract.address, activity, contract.userId).catch((e) =>
+            console.error(`[pool] webhook delivery error for ${key}:`, e),
+          ),
+        ).catch((e) => console.error(`[pool] getDb error:`, e));
       }).catch((e) => {
         console.error(`[pool] start error for ${key}:`, e);
         this.entries.delete(key);
@@ -98,7 +112,7 @@ export class WatcherPool {
       endpoint:   contract.surface === 'evm' ? evmEndpoint : nativeEndpoint,
       contract:   contract.address,
       onStatus:   (status: string, detail?: string) =>
-        console.log(`[pool] ${contract.surface}:${contract.address.slice(0, 8)}… → ${status}${detail ? ' ' + detail : ''}`),
+        console.log(`[pool] ${contract.surface}:${contract.address.slice(0, 8)}... -> ${status}${detail ? ' ' + detail : ''}`),
     };
 
     return contract.surface === 'evm'
