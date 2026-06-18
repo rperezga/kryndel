@@ -1,10 +1,10 @@
 /**
  * /dashboard/api-keys -- API key management page.
- * Server Component + Server Actions (pattern from existing dashboard).
+ * Server Component (no 'use server' directive at module level — that conflicts
+ * with non-async exports like `dynamic` and `metadata`).
+ * Server Actions are marked inline with 'use server' inside each async function.
  * Pro only -- Free users see upgrade banner.
  */
-'use server';
-
 import { redirect }          from 'next/navigation';
 import { revalidatePath }    from 'next/cache';
 import { auth }              from '@/auth';
