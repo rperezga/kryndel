@@ -1,0 +1,348 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Kryndel REST API",
+    "version": "1.0.0",
+    "description": "Observability and alerting API for XRPL EVM Sidechain and XLS-0101 native contracts.",
+    "contact": {
+      "email": "support@kryndel.io"
+    }
+  },
+  "servers": [
+    { "url": "https://kryndel.vercel.app/api/v1", "description": "Production" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "API key in Authorization header: Bearer kr_live_..."
+      }
+    },
+    "schemas": {
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page":    { "type": "integer" },
+          "limit":   { "type": "integer" },
+          "total":   { "type": "integer" },
+          "hasMore": { "type": "boolean" }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "message": { "type": "string" },
+              "code":    { "type": "string" }
+            }
+          }
+        }
+      },
+      "Contract": {
+        "type": "object",
+        "properties": {
+          "_id":       { "type": "string" },
+          "userId":    { "type": "string" },
+          "address":   { "type": "string" },
+          "surface":   { "type": "string", "enum": ["evm", "native"] },
+          "name":      { "type": "string" },
+          "active":    { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Event": {
+        "type": "object",
+        "properties": {
+          "_id":             { "type": "string" },
+          "contractAddress": { "type": "string" },
+          "name":            { "type": "string" },
+          "args":            { "type": "object" },
+          "txHash":          { "type": "string" },
+          "createdAt":       { "type": "string", "format": "date-time" }
+        }
+      },
+      "Rule": {
+        "type": "object",
+        "properties": {
+          "_id":             { "type": "string" },
+          "userId":          { "type": "string" },
+          "contractAddress": { "type": "string" },
+          "eventName":       { "type": "string" },
+          "channel":         { "type": "string", "enum": ["telegram", "discord", "webhook", "email"] },
+          "target":          { "type": "string" },
+          "active":          { "type": "boolean" }
+        }
+      },
+      "Webhook": {
+        "type": "object",
+        "properties": {
+          "_id":               { "type": "string" },
+          "userId":            { "type": "string" },
+          "url":               { "type": "string" },
+          "secretPrefix":      { "type": "string" },
+          "description":       { "type": "string" },
+          "active":            { "type": "boolean" },
+          "contractAddresses": { "type": "array", "items": { "type": "string" } },
+          "eventNames":        { "type": "array", "items": { "type": "string" } },
+          "createdAt":         { "type": "string", "format": "date-time" }
+        }
+      },
+      "Delivery": {
+        "type": "object",
+        "properties": {
+          "_id":             { "type": "string" },
+          "endpointId":      { "type": "string" },
+          "contractAddress": { "type": "string" },
+          "eventName":       { "type": "string" },
+          "attempt":         { "type": "integer" },
+          "status":          { "type": "string", "enum": ["pending", "success", "failed", "retrying"] },
+          "httpStatus":      { "type": "integer" },
+          "createdAt":       { "type": "string", "format": "date-time" },
+          "deliveredAt":     { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  },
+  "security": [{ "BearerAuth": [] }],
+  "paths": {
+    "/me": {
+      "get": {
+        "summary": "Get current user info",
+        "operationId": "getMe",
+        "responses": {
+          "200": {
+            "description": "User info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plan":      { "type": "string", "enum": ["free", "pro"] },
+                    "limits":    { "type": "object" },
+                    "contracts": { "type": "integer" },
+                    "rules":     { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/schemas/Error" }
+        }
+      }
+    },
+    "/contracts": {
+      "get": {
+        "summary": "List watched contracts",
+        "operationId": "listContracts",
+        "parameters": [
+          { "name": "page",  "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 50, "maximum": 100 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contract list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data":       { "type": "array", "items": { "$ref": "#/components/schemas/Contract" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contracts/{address}/events": {
+      "get": {
+        "summary": "List events for a contract",
+        "operationId": "listContractEvents",
+        "parameters": [
+          { "name": "address", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "page",    "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit",   "in": "query", "schema": { "type": "integer", "default": 50, "maximum": 100 } },
+          { "name": "surface", "in": "query", "schema": { "type": "string", "enum": ["evm", "native"] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data":       { "type": "array", "items": { "$ref": "#/components/schemas/Event" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contracts/{address}/rules": {
+      "get": {
+        "summary": "List rules for a contract",
+        "operationId": "listContractRules",
+        "parameters": [
+          { "name": "address", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rule list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Rule" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/events": {
+      "get": {
+        "summary": "List events across all contracts",
+        "operationId": "listEvents",
+        "parameters": [
+          { "name": "page",    "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit",   "in": "query", "schema": { "type": "integer", "default": 50, "maximum": 100 } },
+          { "name": "address", "in": "query", "schema": { "type": "string" } },
+          { "name": "event",   "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data":       { "type": "array", "items": { "$ref": "#/components/schemas/Event" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks": {
+      "get": {
+        "summary": "List outbound webhook endpoints",
+        "operationId": "listWebhooks",
+        "responses": {
+          "200": {
+            "description": "Webhook list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Webhook" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create outbound webhook endpoint",
+        "operationId": "createWebhook",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                  "url":               { "type": "string" },
+                  "description":       { "type": "string" },
+                  "contractAddresses": { "type": "array", "items": { "type": "string" } },
+                  "eventNames":        { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Webhook created. The `secret` field is shown ONCE.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "webhook": { "$ref": "#/components/schemas/Webhook" },
+                    "secret":  { "type": "string", "description": "Raw HMAC secret — shown once, store securely." }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks/{id}": {
+      "delete": {
+        "summary": "Revoke a webhook endpoint",
+        "operationId": "deleteWebhook",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Webhook revoked" },
+          "404": { "description": "Not found" }
+        }
+      }
+    },
+    "/webhooks/{id}/deliveries": {
+      "get": {
+        "summary": "List recent deliveries for a webhook endpoint",
+        "operationId": "listWebhookDeliveries",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delivery list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Delivery" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "summary": "OpenAPI specification",
+        "operationId": "getOpenApiSpec",
+        "security": [],
+        "responses": {
+          "200": { "description": "OpenAPI 3.1 spec JSON" }
+        }
+      }
+    }
+  }
+}
