@@ -71,7 +71,22 @@ export default function WatchForm({ contractAddress, eventNames }: Props) {
         </div>
 
         {state.error && (
-          <p className="form-msg error">{state.error}</p>
+          <p className="form-msg error">
+            {state.error === 'You must sign in to create alert rules.' ? (
+              <span>
+                You must{' '}
+                <a
+                  href={`/login?callbackUrl=${encodeURIComponent(`/contract/${contractAddress}`)}`}
+                  style={{ color: 'inherit', textDecoration: 'underline', fontWeight: 'bold' }}
+                >
+                  sign in
+                </a>{' '}
+                to create alert rules.
+              </span>
+            ) : (
+              state.error
+            )}
+          </p>
         )}
         {state.success && (
           <p className="form-msg success">✓ {state.success}</p>

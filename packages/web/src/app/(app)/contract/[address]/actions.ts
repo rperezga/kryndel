@@ -20,6 +20,8 @@ import { getDb }                  from '@/lib/db';
 import { requireUser }            from '@/lib/current-user';
 import { PLAN_LIMITS, type Plan } from '@/lib/models/user';
 import { assertSafePublicUrl }    from '@/lib/ssrf';
+import { validateAddress }        from '@/lib/validate';
+import { revalidatePath }         from 'next/cache';
 
 export interface WatchState {
   error?:   string;
@@ -134,3 +136,69 @@ export async function watchEvent(
     return { error: `Error saving rule: ${msg}` };
   }
 }
+
+export async function addContractToDashboard(
+  address: string,
+  surface: string,
+): Promise<{ success?: string; error?: string }> {
+  let user;
+  try {
+    user = await requireUser();
+  } catch {
+    return { error: 'You must sign in to add contracts.' };
+  }
+
+  const contractAddress = address.trim().toLowerCase();
+  if (!contractAddress || !validateAddress(contractAddress)) {
+    return { error: 'Invalid contract address.' };
+  }
+  if (!['evm', 'native', 'alphanet'].includes(surface)) {
+    return { error: 'Invalid network.' };
+  }
+
+  // Normalize surface to model values
+  const normalizedSurface = surface === 'alphanet' ? 'native' : surface;
+
+  try {
+    const db = await getDb();
+    const plan: Plan = user.plan === 'pro' ? 'pro' : 'free';
+    const limit = PLAN_LIMITS[plan].maxContracts;
+
+    const existing = await db.collection('contracts').findOne({
+      userId: user._id,
+      address: contractAddress,
+      surface: normalizedSurface,
+    });
+    if (existing) {
+      return { success: 'Contract is already in your dashboard.' };
+    }
+
+    const now = new Date();
+    const doc = {
+      userId: user._id,
+      address: contractAddress,
+      surface: normalizedSurface,
+      name: contractAddress.slice(0, 10) + '…',
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const result = await db.collection('contracts').insertOne(doc);
+
+    const count = await db.collection('contracts').countDocuments({ userId: user._id });
+    if (count > limit) {
+      await db.collection('contracts').deleteOne({ _id: result.insertedId });
+      return {
+        error: `${plan} plan allows up to ${limit} contracts. Upgrade to Pro for more.`,
+      };
+    }
+
+    revalidatePath(`/contract/${contractAddress}`);
+    return { success: 'Contract successfully added to your dashboard!' };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { error: `Error adding contract: ${msg}` };
+  }
+}
+

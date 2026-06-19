@@ -13,6 +13,11 @@ export const metadata: Metadata = {
 };
 
 export default function ExplorerPage() {
+  const suggestions = [
+    '0xe4c3ee653d7861cf236b2bea4bdb2a261231ea67',
+    'r3kmCwWFa5rvPTh4K3L689254d1ab',
+  ];
+
   return (
     <div className="home-hero">
       <h1>
@@ -21,13 +26,8 @@ export default function ExplorerPage() {
       <p>
         Decode calls, trace events and set alerts for EVM Sidechain &amp; native XRPL contracts (XLS-0101).
       </p>
-      <SearchForm />
-      <p style={{ marginTop: '1rem', fontSize: '.8rem', color: 'var(--muted2)' }}>
-        Try:{' '}
-        <code style={{ fontFamily: 'var(--mono)', color: 'var(--muted)' }}>0xe4c3ee…</code>{' '}
-        on EVM Sidechain or a native XLS-0101{' '}
-        <code style={{ fontFamily: 'var(--mono)', color: 'var(--muted)' }}>r…</code> address
-      </p>
+      <SearchForm suggestions={suggestions} />
     </div>
   );
 }
+

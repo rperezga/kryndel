@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getDb } from '@/lib/db';
 import { validateAddress } from '@/lib/validate';
+import { auth } from '@/auth';
+import { addContractToDashboard } from './actions';
 import WatchForm from './WatchForm';
 
 interface Props { params: Promise<{ address: string }> }
@@ -56,6 +58,67 @@ export default async function ContractPage({ params }: Props) {
   // Recolectar event names únicos para el watch form
   const eventNames = [...new Set(events.map((e) => e.name as string))].slice(0, 20);
 
+  // Check if current logged-in user owns this contract
+  const session = await auth();
+  let userHasContract = false;
+  if (session?.user?.email) {
+    const user = await db.collection('users').findOne({ email: session.user.email.toLowerCase() });
+    if (user) {
+      const owned = await db.collection('contracts').findOne({
+        userId: user._id,
+        $or: [{ address: addrLower }, { address }],
+      });
+      userHasContract = !!owned;
+    }
+  }
+
+  let actionButton = null;
+  if (!session?.user) {
+    actionButton = (
+      <a
+        href={`/login?callbackUrl=${encodeURIComponent(`/contract/${address}`)}`}
+        className="btn btn-ghost"
+        style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', textDecoration: 'none' }}
+      >
+        + Add to Dashboard
+      </a>
+    );
+  } else if (!userHasContract) {
+    actionButton = (
+      <form
+        action={async () => {
+          'use server';
+          await addContractToDashboard(address, surface);
+        }}
+        style={{ display: 'inline' }}
+      >
+        <button
+          type="submit"
+          className="btn btn-ghost"
+          style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', cursor: 'pointer' }}
+        >
+          + Add to Dashboard
+        </button>
+      </form>
+    );
+  } else {
+    actionButton = (
+      <span
+        style={{
+          fontSize: '0.8rem',
+          color: 'var(--signal)',
+          fontFamily: 'var(--mono)',
+          background: 'rgba(78,240,192,.08)',
+          border: '1px solid rgba(78,240,192,.2)',
+          borderRadius: 4,
+          padding: '2px 8px',
+        }}
+      >
+        ✓ Monitored
+      </span>
+    );
+  }
+
   return (
     <div>
       <nav className="breadcrumb" aria-label="Breadcrumb">
@@ -63,18 +126,23 @@ export default async function ContractPage({ params }: Props) {
       </nav>
 
       {/* Header */}
-      <div className="contract-header">
-        <h1 className="mono">{address}</h1>
-        <div className="contract-meta">
-          <span className={badgeClass(surface)}>{surface}</span>
-          {contract?.label && <span>{contract.label as string}</span>}
-          {contract?.firstSeenAt && (
-            <span>First seen: {fmtDate(contract.firstSeenAt)}</span>
-          )}
-          {contract?.updatedAt && (
-            <span>Last active: {fmtDate(contract.updatedAt)}</span>
-          )}
-          <span>{calls.length} calls · {events.length} events indexed</span>
+      <div className="contract-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h1 className="mono" style={{ wordBreak: 'break-all', fontSize: '1rem', fontWeight: 600, marginBottom: '.4rem' }}>{address}</h1>
+          <div className="contract-meta" style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+            <span className={badgeClass(surface)}>{surface}</span>
+            {contract?.label && <span>{contract.label as string}</span>}
+            {contract?.firstSeenAt && (
+              <span>First seen: {fmtDate(contract.firstSeenAt)}</span>
+            )}
+            {contract?.updatedAt && (
+              <span>Last active: {fmtDate(contract.updatedAt)}</span>
+            )}
+            <span>{calls.length} calls · {events.length} events indexed</span>
+          </div>
+        </div>
+        <div>
+          {actionButton}
         </div>
       </div>
 
