@@ -57,8 +57,8 @@ export default async function TxPage({ params }: Props) {
 
   return (
     <div className="timeline-page">
-      <nav className="breadcrumb">
-        <a href="/">Explorer</a>
+      <nav className="breadcrumb" aria-label="Breadcrumb">
+        <a href="/explorer">Explorer</a>
         {' / '}
         <a href={`/contract/${address}`}>{address.slice(0, 10)}…</a>
         {' / tx'}

@@ -5,11 +5,11 @@
     "version": "1.0.0",
     "description": "Observability and alerting API for XRPL EVM Sidechain and XLS-0101 native contracts.",
     "contact": {
-      "email": "support@kryndel.io"
+      "email": "support@kryndel.dev"
     }
   },
   "servers": [
-    { "url": "https://kryndel.vercel.app/api/v1", "description": "Production" }
+    { "url": "https://kryndel.dev/api/v1", "description": "Production" }
   ],
   "components": {
     "securitySchemes": {

@@ -120,7 +120,7 @@ beforeEach(() => {
 describe('[PA-SMOKE] addContract Server Action', () => {
   it('anonymous user does not write to DB', async () => {
     sessionState.user = null;
-    const { addContract } = await import('@/app/dashboard/add-contract/actions');
+    const { addContract } = await import('@/app/(app)/dashboard/add-contract/actions');
     await expect(addContract(form({
       address: contractAddr, surface: 'evm', name: 'Smoke',
     }))).rejects.toThrow();
@@ -129,7 +129,7 @@ describe('[PA-SMOKE] addContract Server Action', () => {
 
   it('Free user: first contract gets inserted with userId', async () => {
     sessionState.user = { _id: userId, email: 'r@x.com', plan: 'free' };
-    const { addContract } = await import('@/app/dashboard/add-contract/actions');
+    const { addContract } = await import('@/app/(app)/dashboard/add-contract/actions');
     await expect(addContract(form({
       address: contractAddr, surface: 'evm', name: 'Smoke',
     }))).rejects.toThrow();
@@ -140,7 +140,7 @@ describe('[PA-SMOKE] addContract Server Action', () => {
 
   it('Free user: invalid address → no DB write', async () => {
     sessionState.user = { _id: userId, email: 'r@x.com', plan: 'free' };
-    const { addContract } = await import('@/app/dashboard/add-contract/actions');
+    const { addContract } = await import('@/app/(app)/dashboard/add-contract/actions');
     await expect(addContract(form({
       address: 'not-an-address', surface: 'evm',
     }))).rejects.toThrow();
@@ -149,7 +149,7 @@ describe('[PA-SMOKE] addContract Server Action', () => {
 
   it('Free user: 4th contract rolled back (Free=3 max) — only 3 rows survive', async () => {
     sessionState.user = { _id: userId, email: 'r@x.com', plan: 'free' };
-    const { addContract } = await import('@/app/dashboard/add-contract/actions');
+    const { addContract } = await import('@/app/(app)/dashboard/add-contract/actions');
     for (let i = 1; i <= 3; i++) {
       const addr = '0x' + i.toString().padEnd(40, '0');
       await expect(addContract(form({ address: addr, surface: 'evm' }))).rejects.toThrow();
@@ -176,7 +176,7 @@ describe('[PA-SMOKE] addRule Server Action', () => {
 
   it('anonymous user does not write a rule', async () => {
     sessionState.user = null;
-    const { addRule } = await import('@/app/dashboard/rules/actions');
+    const { addRule } = await import('@/app/(app)/dashboard/rules/actions');
     await expect(addRule(contractAddr, form({
       eventName: 'Transfer', target: '-1001234567890',
     }))).rejects.toThrow();
@@ -185,7 +185,7 @@ describe('[PA-SMOKE] addRule Server Action', () => {
 
   it('Free user: first rule inserted with userId + telegram channel', async () => {
     sessionState.user = { _id: userId, email: 'r@x.com', plan: 'free' };
-    const { addRule } = await import('@/app/dashboard/rules/actions');
+    const { addRule } = await import('@/app/(app)/dashboard/rules/actions');
     await expect(addRule(contractAddr, form({
       eventName: 'Transfer', target: '-1001234567890',
     }))).rejects.toThrow();
@@ -196,7 +196,7 @@ describe('[PA-SMOKE] addRule Server Action', () => {
 
   it('Free user: 2nd rule on same contract rolled back', async () => {
     sessionState.user = { _id: userId, email: 'r@x.com', plan: 'free' };
-    const { addRule } = await import('@/app/dashboard/rules/actions');
+    const { addRule } = await import('@/app/(app)/dashboard/rules/actions');
     await expect(addRule(contractAddr, form({
       eventName: 'Transfer', target: '-1001234567890',
     }))).rejects.toThrow();
@@ -208,7 +208,7 @@ describe('[PA-SMOKE] addRule Server Action', () => {
 
   it('malformed chat ID → no rule inserted', async () => {
     sessionState.user = { _id: userId, email: 'r@x.com', plan: 'free' };
-    const { addRule } = await import('@/app/dashboard/rules/actions');
+    const { addRule } = await import('@/app/(app)/dashboard/rules/actions');
     await expect(addRule(contractAddr, form({
       eventName: 'Transfer', target: 'not-a-chat-id',
     }))).rejects.toThrow();
@@ -217,7 +217,7 @@ describe('[PA-SMOKE] addRule Server Action', () => {
 
   it('contract not owned by user → no rule inserted', async () => {
     sessionState.user = { _id: new ObjectId(), email: 'other@x.com', plan: 'free' };
-    const { addRule } = await import('@/app/dashboard/rules/actions');
+    const { addRule } = await import('@/app/(app)/dashboard/rules/actions');
     await expect(addRule(contractAddr, form({
       eventName: 'Transfer', target: '-1001234567890',
     }))).rejects.toThrow();

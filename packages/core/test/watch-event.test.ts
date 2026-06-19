@@ -105,7 +105,7 @@ vi.mock('@/lib/models/index', () => ({
 }));
 
 // ── Import after mocks are in place ──────────────────────────────────────────
-import { watchEvent } from '@/app/contract/[address]/actions';
+import { watchEvent } from '@/app/(app)/contract/[address]/actions';
 
 function form(
   fields: Partial<{ contract: string; event: string; channel: string; target: string }>,

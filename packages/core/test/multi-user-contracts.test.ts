@@ -123,7 +123,7 @@ beforeEach(() => {
 
 describe('[PA-BILLING / paso 0] multi-user contracts', () => {
   it('TWO different users can register the SAME contract — no E11000', async () => {
-    const { addContract } = await import('@/app/dashboard/add-contract/actions');
+    const { addContract } = await import('@/app/(app)/dashboard/add-contract/actions');
 
     sessionState.user = { _id: userA, email: 'a@x.com', plan: 'free' };
     await expect(addContract(form({ address: contractAddr, surface: 'evm' })))
@@ -142,7 +142,7 @@ describe('[PA-BILLING / paso 0] multi-user contracts', () => {
 
   it('one user adding the SAME contract twice is idempotent (no second row)', async () => {
     sessionState.user = { _id: userA, email: 'a@x.com', plan: 'free' };
-    const { addContract } = await import('@/app/dashboard/add-contract/actions');
+    const { addContract } = await import('@/app/(app)/dashboard/add-contract/actions');
 
     await expect(addContract(form({ address: contractAddr, surface: 'evm' })))
       .rejects.toThrow();
@@ -154,7 +154,7 @@ describe('[PA-BILLING / paso 0] multi-user contracts', () => {
   });
 
   it('per-user query isolation: each user only sees their own contract', async () => {
-    const { addContract } = await import('@/app/dashboard/add-contract/actions');
+    const { addContract } = await import('@/app/(app)/dashboard/add-contract/actions');
 
     sessionState.user = { _id: userA, email: 'a@x.com', plan: 'free' };
     await expect(addContract(form({ address: contractAddr, surface: 'evm' })))

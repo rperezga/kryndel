@@ -11,7 +11,8 @@
  * Required env vars:
  *   AUTH_SECRET     — random 32-byte secret (openssl rand -base64 32)
  *   RESEND_API_KEY  — Resend API key
- *   EMAIL_FROM      — verified sender address (e.g. noreply@kryndel.xyz)
+ *   EMAIL_FROM      — verified sender address (e.g. login@kryndel.dev once domain verified in Resend;
+ *                      currently noreply@kryndel.xyz until kryndel.dev DNS propagates)
  *   MONGODB_URI     — MongoDB connection string
  *   NEXTAUTH_URL    — app base URL (http://localhost:3000 in dev)
  */

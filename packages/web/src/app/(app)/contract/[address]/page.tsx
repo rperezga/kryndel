@@ -58,8 +58,8 @@ export default async function ContractPage({ params }: Props) {
 
   return (
     <div>
-      <nav className="breadcrumb">
-        <a href="/">Explorer</a> / contract
+      <nav className="breadcrumb" aria-label="Breadcrumb">
+        <a href="/explorer">Explorer</a> / contract
       </nav>
 
       {/* Header */}
