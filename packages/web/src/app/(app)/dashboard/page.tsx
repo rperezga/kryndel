@@ -2,11 +2,12 @@
  * /dashboard — user's watched contracts.
  * Server Component: fetches data directly from MongoDB.
  */
-import { redirect }   from 'next/navigation';
-import { auth }       from '@/auth';
-import { getDb }      from '@/lib/db';
+import { redirect }     from 'next/navigation';
+import { auth }         from '@/auth';
+import { getDb }        from '@/lib/db';
 import { usersCollection, PLAN_LIMITS, type Plan } from '@/lib/models/index';
-import BillingButtons from './BillingButtons';
+import BillingButtons   from './BillingButtons';
+import AbiUploadModal   from './AbiUploadModal';
 import type { Metadata } from 'next';
 
 export const dynamic  = 'force-dynamic';
@@ -106,7 +107,8 @@ export default async function DashboardPage({
                   <code style={{ fontFamily: 'var(--mono)', fontSize: '0.7rem' }}>{String(c.address)}</code>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <AbiUploadModal address={String(c.address)} hasAbi={!!c.abi} />
                 <a href={`/dashboard/rules?contract=${encodeURIComponent(String(c.address))}`}
                    style={{ padding: '0.375rem 0.625rem', fontSize: '0.8125rem', border: '1px solid var(--border)', borderRadius: 4, color: 'var(--muted)', textDecoration: 'none' }}>
                   Rules

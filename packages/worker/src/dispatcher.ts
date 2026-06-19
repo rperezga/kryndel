@@ -81,6 +81,48 @@ function formatActivity(activity: ContractActivity, contract: string): string {
   return `🔔 *Kryndel Alert*\n📄 Contrato: \`${addr}…\`\n📞 Call: *${txType}*${hash}`;
 }
 
+// ── Arg filter matching ──────────────────────────────────────────────────────
+//
+// F1: Mirrors matchesRule() in @kryndel/core/subscriber.ts but operates on
+// ContractActivity.args (decoded by the pool before dispatch).
+// Operators come from the rule doc (user-trusted, closed enum);
+// values from the activity are on-chain data (untrusted, used as operand only).
+
+const DISPATCH_OPS = ['$gt', '$lt', '$gte', '$lte', '$eq'] as const;
+
+function matchesWorkerFilter(
+  filter: Record<string, unknown>,
+  args:   Record<string, unknown>,
+): boolean {
+  return Object.entries(filter).every(([k, v]) => {
+    const actual = args[k];
+    if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+      const ops = v as Record<string, unknown>;
+      return Object.entries(ops).every(([op, threshold]) => {
+        if (!(DISPATCH_OPS as readonly string[]).includes(op)) return false;
+        try {
+          const a = BigInt(String(actual ?? ''));
+          const t = BigInt(String(threshold ?? ''));
+          switch (op) {
+            case '$gt':  return a > t;
+            case '$lt':  return a < t;
+            case '$gte': return a >= t;
+            case '$lte': return a <= t;
+            case '$eq':  return a === t;
+          }
+        } catch {
+          if (op === '$eq') return String(actual).toLowerCase() === String(threshold).toLowerCase();
+        }
+        return false;
+      });
+    }
+    if (typeof actual === 'string' && typeof v === 'string') {
+      return actual.toLowerCase() === v.toLowerCase();
+    }
+    return actual === v;
+  });
+}
+
 // ── Main dispatch ─────────────────────────────────────────────────────────────
 
 export async function dispatch(
@@ -93,6 +135,10 @@ export async function dispatch(
     if (r.eventName !== '*') {
       const actName = activity.kind === 'event' ? activity.name : activity.txType;
       if (actName !== r.eventName) return false;
+    }
+    // F1: arg filter (only applied if the activity has decoded args)
+    if (r.filter && activity.kind === 'event' && activity.args) {
+      if (!matchesWorkerFilter(r.filter, activity.args)) return false;
     }
     return true;
   });

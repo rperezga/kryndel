@@ -17,7 +17,8 @@ export interface WatchOptions {
 
 export type ContractActivity =
   | { kind: 'call'; contract: string; txType: string; raw: unknown; txHash?: string }
-  | { kind: 'event'; contract: string; name?: string; raw: unknown; txHash?: string };
+  // args?: decoded event arguments — populated by the watcher-pool after decodeEvent (F1)
+  | { kind: 'event'; contract: string; name?: string; args?: Record<string, unknown>; raw: unknown; txHash?: string };
 
 export interface Watcher {
   start(onActivity: (a: ContractActivity) => void): Promise<void>;

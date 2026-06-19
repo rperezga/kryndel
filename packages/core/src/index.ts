@@ -1,6 +1,7 @@
 export * from './types.js';
 export * from './recorder.js';
 export * from './watcher.js';
+export * from './event-registry.js';
 export * from './decoder.js';
 export * from './indexer.js';
 export * from './pipeline.js';

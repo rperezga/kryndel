@@ -1,5 +1,6 @@
 import { decodeFunctionData, decodeEventLog, type Abi } from 'viem';
 import type { ContractRef, DecodedCall, ContractEvent } from './types.js';
+import { lookupByTopic0 } from './event-registry.js';
 
 // Decoder — translates raw data into readable calls/events.
 // EVM: viem decodeFunctionData / decodeEventLog with the contract ABI.
@@ -97,8 +98,9 @@ function serializeArg(v: unknown): unknown {
   return v;
 }
 
-/** EVM decoder using the contract ABI (or standard ERC-20 as fallback). */
+/** EVM decoder using the contract ABI (or standard ERC-20 as fallback for calls). */
 export function createEvmDecoder(contract: ContractRef): Decoder {
+  // For decodeCall only; decodeEvent uses a 3-level cascade (see below).
   const abi: Abi = (contract.abi as Abi | undefined) ?? ERC20_ABI;
 
   return {
@@ -120,31 +122,58 @@ export function createEvmDecoder(contract: ContractRef): Decoder {
       // A2.1: propagate logIndex · A2.4: propagate contractAddress
       const logIndex = typeof log.logIndex === 'number' ? log.logIndex : undefined;
       const contractAddress = log.address?.toLowerCase();
-      try {
-        const { eventName, args } = decodeEventLog({
-          abi,
-          data:   log.data,
-          topics: (log.topics ?? []) as [`0x${string}`, ...`0x${string}`[]],
-        });
-        return {
-          name:            String(eventName ?? 'unknown'),
-          args:            argsToRecord(args as unknown as Record<string, unknown>),
-          raw,
-          txHash:          log.transactionHash ?? undefined,
-          logIndex,
-          contractAddress,
-          ledgerOrBlock:   log.blockNumber ? Number(log.blockNumber) : undefined,
-        };
-      } catch {
-        return {
-          name:            log.topics?.[0] ?? 'unknown',
-          args:            {},
-          raw,
-          txHash:          log.transactionHash ?? undefined,
-          logIndex,
-          contractAddress,
-        };
+      const topics = (log.topics ?? []) as [`0x${string}`, ...`0x${string}`[]];
+      const shared = {
+        raw,
+        txHash:        log.transactionHash ?? undefined,
+        logIndex,
+        contractAddress,
+        ledgerOrBlock: log.blockNumber ? Number(log.blockNumber) : undefined,
+      };
+
+      // ── Cascade level 1: contract ABI (if uploaded) ─────────────────────────
+      if (contract.abi) {
+        try {
+          const { eventName, args } = decodeEventLog({
+            abi: contract.abi as Abi,
+            data: log.data,
+            topics,
+          });
+          return {
+            name: String(eventName ?? 'unknown'),
+            args: argsToRecord(args as unknown as Record<string, unknown>),
+            ...shared,
+          };
+        } catch { /* fall through to registry */ }
       }
+
+      // ── Cascade level 2: standard event registry ────────────────────────────
+      const topic0 = log.topics?.[0];
+      if (topic0) {
+        const entry = lookupByTopic0(topic0);
+        if (entry) {
+          try {
+            const { eventName, args } = decodeEventLog({
+              abi: entry.abi,
+              data: log.data,
+              topics,
+            });
+            return {
+              name: String(eventName ?? entry.name),
+              args: argsToRecord(args as unknown as Record<string, unknown>),
+              ...shared,
+            };
+          } catch { /* fall through to unknown */ }
+        }
+      }
+
+      // ── Cascade level 3: unknown fallback ───────────────────────────────────
+      const shortTopic = topic0 ? `${topic0.slice(0, 10)}…` : 'unknown';
+      return {
+        name: `unknown (${shortTopic})`,
+        args: {},
+        ...shared,
+      };
     },
   };
 }

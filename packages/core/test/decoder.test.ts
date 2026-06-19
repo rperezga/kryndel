@@ -48,15 +48,15 @@ describe('createEvmDecoder', () => {
     expect(result.ledgerOrBlock).toBe(1000);
   });
 
-  it('decodeEvent — log con topic desconocido → fallback con topic0 como nombre', () => {
+  it('decodeEvent — log con topic desconocido → fallback "unknown (0x…)"', () => {
     const log = {
       topics: ['0xdeadbeef00000000000000000000000000000000000000000000000000000000' as `0x${string}`],
       data: '0x' as `0x${string}`,
       transactionHash: '0xfoo' as `0x${string}`,
     };
     const result = decoder.decodeEvent(log);
-    // No coincide con ERC-20 ABI → fallback → nombre = topic0
-    expect(result.name).toBe('0xdeadbeef00000000000000000000000000000000000000000000000000000000');
+    // Not in ERC-20 ABI and not in standard registry → cascade level 3
+    expect(result.name).toBe('unknown (0xdeadbeef…)');
     expect(result.args).toEqual({});
   });
 });

@@ -29,8 +29,11 @@ export async function addRule(
   }
 
   const contractAddress = (contractAddressIn ?? '').toLowerCase();
-  const eventName = (formData.get('eventName') as string ?? '').trim();
-  const target    = (formData.get('target')    as string ?? '').trim();
+  const eventName      = (formData.get('eventName')      as string ?? '').trim();
+  const target         = (formData.get('target')         as string ?? '').trim();
+  const filterArgName  = (formData.get('filterArgName')  as string ?? '').trim();
+  const filterOp       = (formData.get('filterOp')       as string ?? '').trim();
+  const filterValue    = (formData.get('filterValue')    as string ?? '').trim();
 
   if (!eventName) {
     redirect(`/dashboard/rules?contract=${encodeURIComponent(contractAddressIn)}&error=` +
@@ -43,6 +46,30 @@ export async function addRule(
   if (!/^-?\d{5,15}$/.test(target)) {
     redirect(`/dashboard/rules?contract=${encodeURIComponent(contractAddressIn)}&error=` +
       encodeURIComponent('Telegram Chat ID must be an integer (e.g. -1001234567890).'));
+  }
+
+  // Validate optional arg filter — only if filterArgName is provided
+  // Operators come from a closed enum (user-submitted but validated here) so they
+  // are safe to store as-is; values from filterValue are stored as strings.
+  const OP_MAP: Record<string, string> = {
+    '>': '$gt', '<': '$lt', '>=': '$gte', '<=': '$lte', '=': '$eq',
+  };
+  let filter: Record<string, unknown> | undefined;
+  if (filterArgName) {
+    if (!/^[a-zA-Z_]\w{0,63}$/.test(filterArgName)) {
+      redirect(`/dashboard/rules?contract=${encodeURIComponent(contractAddressIn)}&error=` +
+        encodeURIComponent('Invalid argument name (letters, digits, underscore; max 64 chars).'));
+    }
+    if (!filterValue) {
+      redirect(`/dashboard/rules?contract=${encodeURIComponent(contractAddressIn)}&error=` +
+        encodeURIComponent('Filter value is required when an argument name is set.'));
+    }
+    const mongoOp = OP_MAP[filterOp];
+    if (!mongoOp) {
+      redirect(`/dashboard/rules?contract=${encodeURIComponent(contractAddressIn)}&error=` +
+        encodeURIComponent('Invalid filter operator.'));
+    }
+    filter = { [filterArgName]: { [mongoOp]: filterValue } };
   }
 
   const db = await getDb();
@@ -63,6 +90,7 @@ export async function addRule(
     eventName,
     channel:         'telegram',
     target,
+    ...(filter ? { filter } : {}),
     active:          true,
     createdAt:       now,
     updatedAt:       now,

@@ -8,12 +8,40 @@
  * PB-core: after dispatching alerts, also triggers deliverWebhooks for
  * outbound signed delivery to user-registered webhook endpoints.
  */
-import { createEvmWatcher, createNativeWatcher } from '@kryndel/core';
+import { createEvmWatcher, createNativeWatcher, createEvmDecoder } from '@kryndel/core';
 import type { Watcher, ContractActivity } from '@kryndel/core';
 import type { WContract, WAlertRule } from './types.js';
 import { dispatch }          from './dispatcher.js';
 import { deliverWebhooks }   from './webhook-deliverer.js';
 import { getDb }             from './db.js';
+
+/**
+ * F1: Decode an EVM ContractActivity using the cascade decoder.
+ * Resolves the raw topic0 (.name) to a human-readable event name and populates
+ * .args so the dispatcher can apply arg-level filter rules.
+ *
+ * Each call is cheap (no network I/O — pure ABI lookup + viem decode).
+ * ABI changes from the reconcile loop take effect on the next event without
+ * restarting the pool (no decoder instance is cached).
+ *
+ * On any error, returns the original activity unchanged — never crashes the pool.
+ */
+function decodeEvmActivity(
+  activity: ContractActivity,
+  contract: WContract,
+): ContractActivity {
+  if (activity.kind !== 'event' || !activity.raw) return activity;
+  try {
+    const decoded = createEvmDecoder({
+      surface: 'evm',
+      address: contract.address,
+      abi:     contract.abi,
+    }).decodeEvent(activity.raw);
+    return { ...activity, name: decoded.name, args: decoded.args };
+  } catch {
+    return activity;
+  }
+}
 
 export type ActivityHandler = (
   activity:  ContractActivity,
@@ -71,8 +99,13 @@ export class WatcherPool {
       watcher.start(async (activity) => {
         const rules = rulesByContract.get(key) ?? [];
 
+        // F1: Decode EVM events before dispatching (topic0 → named event + args)
+        const decoded = contract.surface === 'evm'
+          ? decodeEvmActivity(activity, contract)
+          : activity;
+
         // 1. Dispatch alert rules (Telegram/Discord/webhook alerts)
-        await dispatch(activity, rules, contract.address).catch((e) =>
+        await dispatch(decoded, rules, contract.address).catch((e) =>
           console.error(`[pool] dispatch error for ${key}:`, e),
         );
 

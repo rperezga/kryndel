@@ -23,6 +23,7 @@ export interface WContract {
   address: string;
   surface: Surface;
   label?:  string;
+  abi?:    unknown;  // F1: user-uploaded ABI for named event decoding
   active:  boolean;
   createdAt: Date;
 }
