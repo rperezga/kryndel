@@ -25,3 +25,8 @@ jobs:
       - run: pnpm build
       - run: pnpm lint
       - run: pnpm test
+      # Ensure web package compiles for Vercel — vitest doesn't catch webpack/TS errors in Next.js
+      - name: Build web (Vercel parity)
+        run: pnpm --filter @kryndel/core build && pnpm --filter @kryndel/web build
+        env:
+          SKIP_ENV_VALIDATION: "1"
