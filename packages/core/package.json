@@ -8,7 +8,7 @@
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "webpack": "./src/index.ts",
+      "webpack": "./src/web.ts",
       "import": "./dist/index.js"
     }
   },
