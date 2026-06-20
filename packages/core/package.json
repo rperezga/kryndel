@@ -4,10 +4,10 @@
   "description": "Kryndel core — watcher, decoder, indexer, recorder, subscriber & alerts for XRPL contract observability",
   "type": "module",
   "main": "dist/index.js",
-  "types": "src/index.ts",
+  "types": "src/web.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./src/web.ts",
       "webpack": "./src/web.ts",
       "import": "./dist/index.js"
     }

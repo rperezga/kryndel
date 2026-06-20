@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-check  (r2)
 import type { NextConfig } from 'next';
 
 const config: NextConfig = {
