@@ -7,7 +7,12 @@
  *
  * topic0 values verified against EIP standards and Solidity docs.
  */
-import type { Abi } from 'viem';
+// Local Abi alias — structurally compatible with viem.Abi (readonly AbiItem[]).
+// Avoids a direct viem import so this file is safe to transpile in web/Next.js
+// without viem installed. decoder.ts, which passes .abi to viem's decodeEventLog,
+// has its own `import { ... } from 'viem'` and is not included in the web build.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Abi = readonly any[];
 
 export interface RegistryEntry {
   name: string;
