@@ -4,6 +4,15 @@ const config: NextConfig = {
   // Compile @kryndel/core TypeScript source inline — avoids pre-building core on Vercel.
   // webpack 5 resolves the "webpack" export condition in core/package.json → src/index.ts.
   transpilePackages: ['@kryndel/core'],
+  webpack(webpackConfig) {
+    // core/src uses ESM-style imports with .js extensions (e.g. './recorder.js')
+    // that refer to .ts source files. Tell webpack to try .ts when .js isn't found.
+    webpackConfig.resolve.extensionAlias = {
+      '.js': ['.ts', '.tsx', '.js'],
+      '.mjs': ['.mts', '.mjs'],
+    };
+    return webpackConfig;
+  },
   // Sin Tailwind — CSS propio de marca (globals.css)
   // MONGODB_URI se lee solo en el servidor (no NEXT_PUBLIC_)
   eslint: {
