@@ -1,7 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "nextjs",
-  "installCommand": "corepack enable && pnpm install --no-frozen-lockfile",
-  "buildCommand": "pnpm --filter @kryndel/core build && pnpm --filter @kryndel/web build",
-  "outputDirectory": "packages/web/.next"
+  "_note": "Vercel rootDirectory=packages/web — this file is ignored. Config is auto-detected by Next.js framework.",
+  "framework": "nextjs"
 }

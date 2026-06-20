@@ -285,7 +285,7 @@ importers:
         specifier: ^3.11.2
         version: 3.11.2(mongodb@6.21.0)
       '@kryndel/core':
-        specifier: workspace:*
+        specifier: file:../core
         version: link:../core
       mongodb:
         specifier: ^6.9.0

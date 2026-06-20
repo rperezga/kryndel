@@ -1,6 +1,9 @@
 import type { NextConfig } from 'next';
 
 const config: NextConfig = {
+  // Compile @kryndel/core TypeScript source inline — avoids pre-building core on Vercel.
+  // webpack 5 resolves the "webpack" export condition in core/package.json → src/index.ts.
+  transpilePackages: ['@kryndel/core'],
   // Sin Tailwind — CSS propio de marca (globals.css)
   // MONGODB_URI se lee solo en el servidor (no NEXT_PUBLIC_)
   eslint: {
