@@ -1,5 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "_note": "Vercel rootDirectory=packages/web — this file is ignored. Config is auto-detected by Next.js framework.",
   "framework": "nextjs"
 }
