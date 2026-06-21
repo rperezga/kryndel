@@ -58,3 +58,44 @@ export async function POST(_req: NextRequest) {
     return NextResponse.json({ error: 'Could not create checkout session.' }, { status: 500 });
   }
 }
+
+export async function GET(_req: NextRequest) {
+  let user;
+  try { user = await requireUser(); } catch (e) { return e as Response; }
+
+  const priceId = process.env.STRIPE_PRICE_ID;
+  if (!priceId) {
+    return NextResponse.json({ error: 'STRIPE_PRICE_ID not configured.' }, { status: 500 });
+  }
+
+  if (user.plan === 'pro') {
+    return NextResponse.redirect(new URL('/dashboard', _req.url));
+  }
+
+  const stripe  = getStripe();
+  const baseUrl = appBaseUrl();
+  const userIdStr = String(user._id);
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      line_items: [{ price: priceId, quantity: 1 }],
+      customer_email: user.email,
+      client_reference_id: userIdStr,
+      metadata: { userId: userIdStr },
+      subscription_data: { metadata: { userId: userIdStr } },
+      allow_promotion_codes: true,
+      success_url: `${baseUrl}/dashboard?upgrade=success`,
+      cancel_url:  `${baseUrl}/dashboard?upgrade=cancel`,
+    });
+
+    if (!session.url) {
+      return NextResponse.json({ error: 'Stripe did not return a session URL.' }, { status: 502 });
+    }
+    return NextResponse.redirect(session.url);
+  } catch (err) {
+    console.error('[billing/checkout] error:', err);
+    return NextResponse.json({ error: 'Could not create checkout session.' }, { status: 500 });
+  }
+}
+
