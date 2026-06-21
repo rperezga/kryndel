@@ -8,6 +8,7 @@
  * componentes DS de Etapa 0 (Button, Card, Badge, Pill, LiveIndicator).
  */
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import {
   Button,
   Card,
@@ -23,6 +24,7 @@ import {
   LivePill,
 } from '@/components/ds';
 import { PhosphorPulseDemo } from './PhosphorPulseDemo';
+import { DesignShowcase } from './DesignShowcase';
 
 export const metadata: Metadata = {
   title: 'Design System · Kryndel',
@@ -296,6 +298,13 @@ export default function DesignPage() {
               prefers-reduced-motion: reduce → animate-none en LiveDot, PhosphorPulse, transiciones de hover.
             </p>
           </div>
+        </Section>
+
+        {/* ── Stage 5 Data Components ── */}
+        <Section title="Data Components (Stage 5)">
+          <Suspense fallback={<div className="text-ds-text-3 font-ds-mono text-xs animate-pulse">Loading design components...</div>}>
+            <DesignShowcase />
+          </Suspense>
         </Section>
 
         {/* ── Footer ── */}

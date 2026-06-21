@@ -1,0 +1,195 @@
+'use client';
+
+import * as React from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { cn } from './cn';
+import { LivePill, PhosphorPulse } from './LiveIndicator';
+import { Button } from './Button';
+import { AddressPill } from './AddressPill';
+import { TxPill } from './TxPill';
+
+export interface StreamEvent {
+  id: string;
+  timestamp: string;
+  type: string;
+  description: string;
+  address?: string;
+  hash?: string;
+  status?: 'success' | 'reverted' | 'pending';
+  isNew?: boolean; // triggers phosphor pulse
+}
+
+export interface EventStreamProps extends React.HTMLAttributes<HTMLDivElement> {
+  events: StreamEvent[];
+  maxHeight?: string;
+}
+
+export function EventStream({
+  className,
+  events,
+  maxHeight = '400px',
+  ...props
+}: EventStreamProps) {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [isAutoScrolling, setIsAutoScrolling] = React.useState(true);
+  const [showResumeButton, setShowResumeButton] = React.useState(false);
+
+  // Monitor scroll positioning to determine autoscroll freeze state
+  const handleScroll = () => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    // In EventStream, newest items are prepended at the top (index 0).
+    // If the user scrolls down (scrollTop > 10px), they are scrolling away from the latest live feed.
+    const isAtTop = el.scrollTop <= 10;
+
+    if (isAtTop) {
+      setIsAutoScrolling(true);
+      setShowResumeButton(false);
+    } else {
+      setIsAutoScrolling(false);
+      setShowResumeButton(true);
+    }
+  };
+
+  // Autoscroll to top (latest events) on updates if autoscroll is enabled
+  React.useEffect(() => {
+    const el = containerRef.current;
+    if (!el || !isAutoScrolling) return;
+
+    // Smoothly scroll back to top of the event stream list
+    el.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+  }, [events, isAutoScrolling]);
+
+  const handleResumeLive = () => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    el.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+    setIsAutoScrolling(true);
+    setShowResumeButton(false);
+  };
+
+  // Virtualizer for high performance rendering of massive logs
+  const rowVirtualizer = useVirtualizer({
+    count: events.length,
+    getScrollElement: () => containerRef.current,
+    estimateSize: () => 70, // Estimate height per event row card
+    overscan: 5,
+  });
+
+  return (
+    <div
+      className={cn(
+        'relative bg-ds-panel border border-solid border-ds-border rounded-lg flex flex-col overflow-hidden font-ds-sans w-full',
+        className
+      )}
+      {...props}
+    >
+      {/* Top Header: Title + Live Status Indicator */}
+      <div className="flex justify-between items-center border-0 border-b border-solid border-ds-border px-5 py-3.5 select-none bg-ds-panel-2/10">
+        <div className="flex items-center gap-2">
+          <span className="font-ds-mono text-[10px] text-ds-text-3 font-bold uppercase tracking-widest">
+            Event Stream
+          </span>
+          <span className="text-[10px] text-ds-text-3 font-ds-mono font-bold">({events.length})</span>
+        </div>
+        <LivePill />
+      </div>
+
+      {/* Scrolling Content viewport */}
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto custom-scrollbar p-3"
+        style={{ maxHeight }}
+      >
+        <div
+          style={{
+            height: `${rowVirtualizer.getTotalSize()}px`,
+            width: '100%',
+            position: 'relative',
+          }}
+        >
+          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const event = events[virtualRow.index];
+            return (
+              <div
+                key={event.id}
+                className="absolute top-0 left-0 w-full p-1"
+                style={{
+                  height: `${virtualRow.size}px`,
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
+              >
+                <PhosphorPulse active={!!event.isNew}>
+                  <div
+                    className={cn(
+                      'flex items-start justify-between bg-ds-shell border border-solid border-ds-border/60 rounded-md p-3 transition-colors duration-150 hover:bg-ds-panel-2/20',
+                      event.isNew ? 'border-ds-green/40' : ''
+                    )}
+                  >
+                    <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+                      {/* Event Row Header: Type + Timestamp */}
+                      <div className="flex items-center gap-2 select-none">
+                        <span className="font-ds-mono text-[10px] font-bold text-ds-green uppercase tracking-wide">
+                          {event.type}
+                        </span>
+                        <span className="font-ds-mono text-[9px] text-ds-text-3">
+                          {event.timestamp}
+                        </span>
+                      </div>
+
+                      {/* Event Row Content Description */}
+                      <p className="font-ds-sans text-xs text-ds-text-2 leading-relaxed truncate pr-4">
+                        {event.description}
+                      </p>
+
+                      {/* Event Row Metadata Actions (Pills) */}
+                      {(event.address || event.hash) && (
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                          {event.address && (
+                            <AddressPill address={event.address} />
+                          )}
+                          {event.hash && (
+                            <TxPill hash={event.hash} status={event.status} />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </PhosphorPulse>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Floating "Resume live" button panel */}
+      {showResumeButton && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 animate-fade-in select-none">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleResumeLive}
+            className="flex items-center gap-2 px-4 shadow-[0_4px_16px_rgba(43,217,111,0.25)] border border-solid border-ds-green/30"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-ds-shell opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-ds-shell"></span>
+            </span>
+            <span className="font-ds-mono text-[9px] font-bold uppercase tracking-wider">
+              Resume live
+            </span>
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
