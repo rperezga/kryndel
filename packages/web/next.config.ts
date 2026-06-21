@@ -14,7 +14,7 @@ const config: NextConfig = {
     };
     return webpackConfig;
   },
-  // Sin Tailwind — CSS propio de marca (globals.css)
+  // Tailwind v3 activado (Etapa 0) — preflight=false en tailwind.config.ts
   // MONGODB_URI se lee solo en el servidor (no NEXT_PUBLIC_)
   eslint: {
     // Root eslint.config.js uses @typescript-eslint not available in packages/web npm install

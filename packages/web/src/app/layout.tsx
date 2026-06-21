@@ -3,9 +3,28 @@
  * Each route group supplies its own layout:
  *   (marketing)/ → MarketingLayout  (landing, pricing, docs)
  *   (app)/       → AppLayout        (explorer, contract, dashboard, login)
+ *
+ * Etapa 0: Inter (UI) + JetBrains Mono (datos/hashes) via next/font.
+ * Las vars --font-inter y --font-jetbrains se usan en tailwind.config.ts
+ * como font-ds-sans / font-ds-mono. Números tabulares activos via CSS.
  */
 import type { Metadata } from 'next';
+import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains',
+  display: 'swap',
+  // weight: 'variable' carga la fuente como variable font (incluye ital)
+  weight: 'variable',
+});
 
 export const metadata: Metadata = {
   title: { default: 'Kryndel — Observability & alerts for XRPL smart contracts', template: '%s · Kryndel' },
@@ -21,7 +40,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body suppressHydrationWarning>
         {children}
       </body>
