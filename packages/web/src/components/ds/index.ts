@@ -27,3 +27,4 @@ export { RawJsonViewer } from './RawJsonViewer';
 export { BottomFilterSheet } from './BottomFilterSheet';
 export { DataTable } from './DataTable';
 export { EventStream } from './EventStream';
+export type { StreamEvent } from './EventStream';

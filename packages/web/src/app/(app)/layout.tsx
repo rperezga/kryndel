@@ -1,22 +1,17 @@
-import { auth } from '@/auth';
-import { usersCollection } from '@/lib/models/index';
+import { currentUser } from '@/lib/current-user';
 import { ChainSelector } from '@/components/ds/ChainSelector';
 import { HeaderSearchTrigger } from '@/components/ds/HeaderSearchTrigger';
 import { CommandPalette } from '@/components/ds/CommandPalette';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
-  const isLoggedIn = !!session?.user?.email;
+  const user = await currentUser();
+  const isLoggedIn = !!user;
 
   let plan: 'free' | 'pro' = 'free';
   let email = '';
-  if (isLoggedIn && session?.user?.email) {
-    email = session.user.email;
-    const users = await usersCollection();
-    const user = await users.findOne({ email: session.user.email.toLowerCase() });
-    if (user) {
-      plan = user.plan === 'pro' ? 'pro' : 'free';
-    }
+  if (user) {
+    email = user.email;
+    plan = user.plan === 'pro' ? 'pro' : 'free';
   }
 
   return (

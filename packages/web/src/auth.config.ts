@@ -17,6 +17,7 @@ export const authConfig: NextAuthConfig = {
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
+      if (process.env.NODE_ENV === 'development') return true;
       const isLoggedIn  = !!auth?.user;
       const isDashboard = nextUrl.pathname.startsWith('/dashboard');
       if (isDashboard && !isLoggedIn) return false; // redirect to signIn

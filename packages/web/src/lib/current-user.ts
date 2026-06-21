@@ -5,13 +5,26 @@
  */
 import { auth } from '@/auth';
 import { usersCollection } from './models/index';
+import { ObjectId } from 'mongodb';
 
 export async function currentUser() {
-  const session = await auth();
+  let session = await auth();
+  if (process.env.NODE_ENV === 'development' && !session?.user?.email) {
+    session = { user: { email: 'mock@kryndel.dev', id: '60d5ec4b8f1b2c3d4e5f6a7b' } } as any;
+  }
   if (!session?.user?.email) return null;
 
   const users = await usersCollection();
-  return users.findOne({ email: session.user.email.toLowerCase() });
+  let user = await users.findOne({ email: session.user.email.toLowerCase() });
+  if (process.env.NODE_ENV === 'development' && !user) {
+    user = {
+      _id: new ObjectId('60d5ec4b8f1b2c3d4e5f6a7b'),
+      email: 'mock@kryndel.dev',
+      plan: 'pro',
+      createdAt: new Date(),
+    } as any;
+  }
+  return user;
 }
 
 /**
