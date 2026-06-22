@@ -25,7 +25,10 @@ const config: NextConfig = {
   },
   // resend imports @react-email/render optionally — webpack can't resolve it.
   // Marking resend as external lets Node.js load it at runtime instead of bundling it.
-  serverExternalPackages: ['resend'],
+  // viem: used by @kryndel/core tracer/decoder (server-side only).
+  // webpack can't bundle it from core/src because it resolves relative to core's dir,
+  // not web's node_modules. Mark as external → Node.js resolves it from root node_modules at runtime.
+  serverExternalPackages: ['resend', 'viem'],
 };
 
 export default config;
