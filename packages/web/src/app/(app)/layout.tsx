@@ -122,6 +122,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               Events
             </a>
             <a
+              href="/dashboard/traces"
+              className="flex items-center gap-3 px-3 py-2 text-ds-text-2 hover:text-ds-green hover:bg-ds-panel-2 rounded transition-all font-ds-mono text-xs no-underline"
+            >
+              Tx Traces
+            </a>
+            <a
               href="/dashboard/webhooks"
               className="flex items-center gap-3 px-3 py-2 text-ds-text-2 hover:text-ds-green hover:bg-ds-panel-2 rounded transition-all font-ds-mono text-xs no-underline"
             >
@@ -188,6 +194,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             className="flex flex-col items-center justify-center text-ds-text-3 hover:text-ds-green active:scale-95 transition-all no-underline gap-1"
           >
             <span className="font-ds-mono text-[9px] uppercase tracking-wider font-bold">Explorer</span>
+          </a>
+          <a
+            href="/dashboard/traces"
+            className="flex flex-col items-center justify-center text-ds-text-3 hover:text-ds-green active:scale-95 transition-all no-underline gap-1"
+          >
+            <span className="font-ds-mono text-[9px] uppercase tracking-wider font-bold">Traces</span>
           </a>
           <a
             href="/dashboard/contracts?add=true"

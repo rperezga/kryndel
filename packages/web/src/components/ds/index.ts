@@ -28,3 +28,6 @@ export { BottomFilterSheet } from './BottomFilterSheet';
 export { DataTable } from './DataTable';
 export { EventStream } from './EventStream';
 export type { StreamEvent } from './EventStream';
+// Etapa 10 — EventTimeline
+export { EventTimeline } from './EventTimeline';
+export type { EventTimelineProps, AlertMatch } from './EventTimeline';
