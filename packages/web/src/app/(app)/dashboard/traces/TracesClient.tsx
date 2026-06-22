@@ -177,7 +177,7 @@ export function TracesClient({ traces, contractNames }: TracesClientProps) {
       {/* Trace input form */}
       <form
         onSubmit={handleTrace}
-        className="flex flex-col sm:flex-row gap-2 items-start sm:items-center"
+        className="flex flex-row gap-2 items-center"
         aria-label="Trace a transaction"
       >
         <input
@@ -213,15 +213,22 @@ export function TracesClient({ traces, contractNames }: TracesClientProps) {
         </div>
       )}
 
-      {/* Traces table */}
-      <DataTable<TraceRow, any>
-        columns={columns}
-        data={traces}
-        emptyTitle="No traces yet"
-        emptyDescription="Paste an EVM transaction hash above to decode it. Kryndel will decode the call, events, and state diff into a readable timeline."
-        emptyCodeExample={`# Trace a tx via CLI\nkryndel trace --tx 0xYOUR_TX_HASH`}
-        filterParamKey="q"
-      />
+      {/* Traces table — show EmptyWorkbench outside the table on mobile for clean layout */}
+      {traces.length === 0 ? (
+        <div className="mt-4">
+          <EmptyWorkbench
+            title="No traces yet"
+            description="Paste an EVM transaction hash above to decode it. Kryndel will decode the call, events, and state diff into a readable timeline."
+            codeExample={`# Trace a tx via CLI\nkryndel trace --tx 0xYOUR_TX_HASH`}
+          />
+        </div>
+      ) : (
+        <DataTable<TraceRow, any>
+          columns={columns}
+          data={traces}
+          filterParamKey="q"
+        />
+      )}
     </div>
   );
 }
