@@ -85,7 +85,7 @@ export function TracesClient({ traces, contractNames }: TracesClientProps) {
       id: 'contract',
       accessorFn: (row) => contractNames[row.contractAddress?.toLowerCase()] ?? row.contractAddress,
       header: 'Contract',
-      size: 180,
+      size: 160,
       cell: ({ row }) => {
         const name = contractNames[row.original.contractAddress?.toLowerCase()];
         return (
@@ -99,7 +99,7 @@ export function TracesClient({ traces, contractNames }: TracesClientProps) {
       id: 'method',
       accessorKey: 'method',
       header: 'Method',
-      size: 160,
+      size: 150,
       cell: ({ getValue }) => (
         <span className="font-ds-mono text-xs text-ds-amber">
           {String(getValue())}
@@ -110,7 +110,7 @@ export function TracesClient({ traces, contractNames }: TracesClientProps) {
       id: 'status',
       accessorKey: 'status',
       header: 'Status',
-      size: 110,
+      size: 100,
       cell: ({ getValue }) => {
         const v = getValue() as string;
         return (
@@ -125,7 +125,7 @@ export function TracesClient({ traces, contractNames }: TracesClientProps) {
       id: 'blockNumber',
       accessorKey: 'blockNumber',
       header: 'Block',
-      size: 110,
+      size: 100,
       cell: ({ getValue }) => {
         const v = getValue();
         return (
@@ -139,7 +139,7 @@ export function TracesClient({ traces, contractNames }: TracesClientProps) {
       id: 'createdAt',
       accessorKey: 'createdAt',
       header: 'Time',
-      size: 110,
+      size: 100,
       cell: ({ getValue }) => (
         <span className="font-ds-mono text-xs text-ds-text-3">
           {formatRelativeTime(getValue() as string | null)}
@@ -149,7 +149,7 @@ export function TracesClient({ traces, contractNames }: TracesClientProps) {
     {
       id: 'action',
       header: '',
-      size: 80,
+      size: 72,
       cell: ({ row }) => (
         <a
           href={`/dashboard/traces/${row.original.txHash}`}
@@ -163,28 +163,26 @@ export function TracesClient({ traces, contractNames }: TracesClientProps) {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5 w-full max-w-full overflow-x-hidden">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-ds-mono text-lg font-bold text-ds-text tracking-tight">Tx Traces</h1>
-          <p className="font-ds-mono text-xs text-ds-text-3 mt-1">
-            Decode and inspect EVM transactions — call, events, state diff, related alerts.
-          </p>
-        </div>
+      <div>
+        <h1 className="font-ds-mono text-lg font-bold text-ds-text tracking-tight">Tx Traces</h1>
+        <p className="font-ds-mono text-xs text-ds-text-3 mt-1">
+          Decode and inspect EVM transactions — call, events, state diff, related alerts.
+        </p>
       </div>
 
-      {/* Trace input form */}
+      {/* Trace input form — always single row, input grows */}
       <form
         onSubmit={handleTrace}
-        className="flex flex-row gap-2 items-center"
+        className="flex flex-row gap-2 items-center w-full"
         aria-label="Trace a transaction"
       >
         <input
           type="text"
           value={hashInput}
           onChange={(e) => setHashInput(e.target.value)}
-          placeholder="0x… paste EVM tx hash to trace"
+          placeholder="0x… paste EVM tx hash"
           className="flex-1 min-w-0 bg-ds-shell border border-solid border-ds-border rounded-lg py-2 px-3 font-ds-mono text-xs text-ds-text placeholder:text-ds-text-3 outline-none focus:border-ds-green transition-all"
           aria-label="Transaction hash to trace"
           disabled={tracing}
@@ -195,8 +193,9 @@ export function TracesClient({ traces, contractNames }: TracesClientProps) {
           size="sm"
           disabled={tracing || !hashInput.trim()}
           aria-busy={tracing}
+          className="flex-shrink-0"
         >
-          {tracing ? 'Tracing…' : 'Trace Tx'}
+          {tracing ? '…' : 'Trace Tx'}
         </Button>
       </form>
 
@@ -204,30 +203,35 @@ export function TracesClient({ traces, contractNames }: TracesClientProps) {
       {traceError && (
         <div
           role="alert"
-          className="flex items-center gap-2 px-4 py-3 rounded-lg border border-solid border-ds-red/30 bg-ds-red/5 font-ds-mono text-xs text-ds-red"
+          className="flex items-start gap-2 px-4 py-3 rounded-lg border border-solid border-ds-red/30 bg-ds-red/5 font-ds-mono text-xs text-ds-red"
         >
-          <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <svg className="w-4 h-4 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
             <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
-          {traceError}
+          <span className="break-all">{traceError}</span>
         </div>
       )}
 
-      {/* Traces table — show EmptyWorkbench outside the table on mobile for clean layout */}
+      {/* Content: empty state OR table */}
       {traces.length === 0 ? (
-        <div className="mt-4">
+        /* Empty state — full width, centered, no overflow */
+        <div className="w-full flex justify-center px-0">
           <EmptyWorkbench
             title="No traces yet"
             description="Paste an EVM transaction hash above to decode it. Kryndel will decode the call, events, and state diff into a readable timeline."
             codeExample={`# Trace a tx via CLI\nkryndel trace --tx 0xYOUR_TX_HASH`}
+            className="w-full max-w-lg"
           />
         </div>
       ) : (
-        <DataTable<TraceRow, any>
-          columns={columns}
-          data={traces}
-          filterParamKey="q"
-        />
+        /* Table — horizontal scroll only when needed */
+        <div className="w-full overflow-x-auto">
+          <DataTable<TraceRow, any>
+            columns={columns}
+            data={traces}
+            filterParamKey="q"
+          />
+        </div>
       )}
     </div>
   );
