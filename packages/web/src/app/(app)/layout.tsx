@@ -1,4 +1,5 @@
 import { currentUser } from '@/lib/current-user';
+import { signOut } from '@/auth';
 import { ChainSelector } from '@/components/ds/ChainSelector';
 import { HeaderSearchTrigger } from '@/components/ds/HeaderSearchTrigger';
 import { CommandPalette } from '@/components/ds/CommandPalette';
@@ -49,7 +50,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 {email}
               </span>
               {/* Sign Out Button */}
-              <form action="/api/auth/signout" method="post" className="m-0 p-0 flex items-center">
+              <form
+                action={async () => {
+                  'use server';
+                  await signOut({ redirectTo: '/' });
+                }}
+                className="m-0 p-0 flex items-center"
+              >
                 <button
                   type="submit"
                   className="bg-transparent border border-solid border-ds-border hover:border-ds-red/40 hover:text-ds-red text-ds-text-2 text-xs font-ds-mono px-3.5 py-1.5 rounded transition-colors cursor-pointer outline-none"
