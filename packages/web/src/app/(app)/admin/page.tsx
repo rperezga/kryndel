@@ -43,7 +43,7 @@ export default async function AdminPage() {
 
   const db = await getDb();
   const users = db.collection('users');
-  const sessions = db.collection('sessions');
+  const logins = db.collection('logins');
   const contracts = db.collection('contracts');
   const alertRules = db.collection('alert_rules');
   const events = db.collection('events');
@@ -85,13 +85,8 @@ export default async function AdminPage() {
     alertRules.estimatedDocumentCount(),
     events.estimatedDocumentCount(),
     apiKeys.estimatedDocumentCount(),
-    sessions.countDocuments({ createdAt: { $gte: since7 } }),
-    sessions.aggregate([
-      { $sort: { createdAt: -1 } },
-      { $limit: 15 },
-      { $lookup: { from: 'users', localField: 'userId', foreignField: '_id', as: 'u' } },
-      { $project: { createdAt: 1, email: { $arrayElemAt: ['$u.email', 0] }, plan: { $arrayElemAt: ['$u.plan', 0] } } },
-    ]).toArray(),
+    logins.countDocuments({ at: { $gte: since7 } }),
+    logins.find({}, { projection: { email: 1, at: 1 } }).sort({ at: -1 }).limit(15).toArray(),
     webhookDeliveries.estimatedDocumentCount(),
     webhookDeliveries.countDocuments({ status: 'failed' }),
   ]);
@@ -183,8 +178,8 @@ export default async function AdminPage() {
                 {recentLoginsRaw.map((s: any, i: number) => (
                   <tr key={i} className="border-0 border-b border-solid border-ds-border/40">
                     <td className="py-1.5 text-ds-text-2 truncate max-w-[200px]">{s.email ?? '— unknown —'}</td>
-                    <td className="py-1.5 text-right text-ds-text-3 whitespace-nowrap pl-3">{fmtDate(s.createdAt)}</td>
-                    <td className="py-1.5 text-right text-ds-green/70 whitespace-nowrap pl-2">{ago(s.createdAt)}</td>
+                    <td className="py-1.5 text-right text-ds-text-3 whitespace-nowrap pl-3">{fmtDate(s.at)}</td>
+                    <td className="py-1.5 text-right text-ds-green/70 whitespace-nowrap pl-2">{ago(s.at)}</td>
                   </tr>
                 ))}
               </tbody>

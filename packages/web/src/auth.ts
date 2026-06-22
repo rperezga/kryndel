@@ -21,6 +21,7 @@ import Resend from 'next-auth/providers/resend';
 import { MongoDBAdapter } from '@auth/mongodb-adapter';
 import { MongoClient } from 'mongodb';
 import { authConfig } from '@/auth.config';
+import { getDb } from '@/lib/db';
 
 // NextAuth v5 needs its own MongoClient reference (separate from our app client).
 // We create a dedicated client here so the adapter lifecycle is self-contained.
@@ -93,6 +94,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string;
       }
       return session;
+    },
+  },
+
+  // Login tracking: registra cada sign-in real (magic link) en la colección `logins`.
+  // Con estrategia JWT no hay sesión en DB, así que esto es lo que alimenta el panel /admin.
+  events: {
+    async signIn({ user }) {
+      try {
+        if (!user?.email) return;
+        const db = await getDb();
+        await db.collection('logins').insertOne({
+          email: user.email.toLowerCase(),
+          at: new Date(),
+        });
+      } catch {
+        // nunca bloquear el login si el tracking falla
+      }
     },
   },
 });
