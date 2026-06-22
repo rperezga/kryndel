@@ -109,6 +109,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               Alerts
             </a>
             <a
+              href="/dashboard/events"
+              className="flex items-center gap-3 px-3 py-2 text-ds-text-2 hover:text-ds-green hover:bg-ds-panel-2 rounded transition-all font-ds-mono text-xs no-underline"
+            >
+              Events
+            </a>
+            <a
+              href="/dashboard/webhooks"
+              className="flex items-center gap-3 px-3 py-2 text-ds-text-2 hover:text-ds-green hover:bg-ds-panel-2 rounded transition-all font-ds-mono text-xs no-underline"
+            >
+              Webhooks
+            </a>
+            <a
               href="/explorer"
               className="flex items-center gap-3 px-3 py-2 text-ds-text-2 hover:text-ds-green hover:bg-ds-panel-2 rounded transition-all font-ds-mono text-xs no-underline"
             >

@@ -80,6 +80,18 @@ export function CommandPalette() {
               Go to Explorer
             </Command.Item>
             <Command.Item
+              onSelect={() => navigateTo('/dashboard/events')}
+              className="flex items-center gap-3 px-3 py-2 rounded text-xs font-ds-mono text-ds-text-2 hover:bg-ds-panel-2 hover:text-ds-green cursor-pointer select-none outline-none focus-visible:bg-ds-panel-2 focus-visible:text-ds-green"
+            >
+              Go to Events
+            </Command.Item>
+            <Command.Item
+              onSelect={() => navigateTo('/dashboard/webhooks')}
+              className="flex items-center gap-3 px-3 py-2 rounded text-xs font-ds-mono text-ds-text-2 hover:bg-ds-panel-2 hover:text-ds-green cursor-pointer select-none outline-none focus-visible:bg-ds-panel-2 focus-visible:text-ds-green"
+            >
+              Go to Webhooks
+            </Command.Item>
+            <Command.Item
               onSelect={() => navigateTo('/docs')}
               className="flex items-center gap-3 px-3 py-2 rounded text-xs font-ds-mono text-ds-text-2 hover:bg-ds-panel-2 hover:text-ds-green cursor-pointer select-none outline-none focus-visible:bg-ds-panel-2 focus-visible:text-ds-green"
             >
