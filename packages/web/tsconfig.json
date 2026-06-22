@@ -24,7 +24,9 @@
     "paths": {
       "@/*": [
         "./src/*"
-      ]
+      ],
+      "viem": ["./node_modules/viem"],
+      "viem/*": ["./node_modules/viem/*"]
     },
     "target": "ES2017"
   },
