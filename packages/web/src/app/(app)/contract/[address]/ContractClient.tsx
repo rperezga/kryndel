@@ -156,7 +156,7 @@ function OverviewTab({
                 <span className="font-ds-mono text-[10px] text-ds-amber font-bold w-24 truncate shrink-0">
                   {(ev.name as string) || 'unknown'}
                 </span>
-                {ev.txHash && (
+                {!!ev.txHash && (
                   <a href={`/dashboard/traces/${ev.txHash as string}`}
                     className="font-ds-mono text-[9px] text-ds-green hover:underline no-underline flex-1 truncate"
                   >
@@ -345,7 +345,7 @@ function AlertsTab({
                 </span>
                 <span className="font-ds-mono text-[10px] text-ds-amber font-bold">{r.event as string}</span>
                 <span className="font-ds-mono text-[10px] text-ds-text-3">{r.channel as string}</span>
-                {r.target && (
+                {!!r.target && (
                   <span className="font-ds-mono text-[9px] text-ds-text-3 truncate max-w-[160px]">{r.target as string}</span>
                 )}
               </div>
