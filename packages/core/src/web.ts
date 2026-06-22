@@ -18,3 +18,5 @@ export {
   lookupByTopic0,
 } from './event-registry.js';
 
+export { matchesRule, createSubscriber } from './subscriber.js';
+

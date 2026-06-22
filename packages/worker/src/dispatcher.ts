@@ -13,6 +13,7 @@
 import type { ContractActivity } from '@kryndel/core';
 import { escapeMarkdownV2, assertSafePublicUrl } from '@kryndel/core';
 import type { WAlertRule } from './types.js';
+import { getDb } from './db.js';
 
 // ── Telegram ─────────────────────────────────────────────────────────────────
 
@@ -142,6 +143,18 @@ export async function dispatch(
     }
     return true;
   });
+
+  if (matchingRules.length > 0) {
+    try {
+      const db = await getDb();
+      await db.collection('alert_rules').updateMany(
+        { _id: { $in: matchingRules.map((r) => r._id) } },
+        { $set: { lastMatchAt: new Date() } }
+      );
+    } catch (err) {
+      console.error('[dispatcher] failed to update lastMatchAt:', err);
+    }
+  }
 
   await Promise.allSettled(
     matchingRules.map(async (rule) => {
