@@ -49,92 +49,59 @@ export default function AbiUploadModal({ address, hasAbi: initialHasAbi }: Props
     }
   }
 
-  const btnStyle: React.CSSProperties = {
-    padding: '0.375rem 0.625rem',
-    fontSize: '0.8125rem',
-    border: '1px solid var(--border)',
-    borderRadius: 4,
-    color: done ? '#4ade80' : 'var(--muted)',
-    background: 'transparent',
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-  };
-
   return (
     <>
-      <button style={btnStyle} onClick={() => setOpen(true)}>
+      <button
+        onClick={() => setOpen(true)}
+        className={`px-3 py-1.5 text-xs border border-solid rounded bg-transparent cursor-pointer whitespace-nowrap font-ds-mono outline-none hover:border-ds-green transition-all ${
+          done
+            ? 'border-ds-green text-ds-green'
+            : 'border-ds-border text-ds-text-2 hover:text-ds-text'
+        }`}
+      >
         {done ? '✓ ABI' : 'Upload ABI'}
       </button>
 
       {open && (
         <div
-          style={{
-            position: 'fixed', inset: 0,
-            background: 'rgba(0,0,0,0.65)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 50,
+          className="fixed inset-0 bg-ds-shell/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 select-none"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setOpen(false);
           }}
-          onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
         >
-          <div style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: '1.5rem',
-            width: 'min(480px, 90vw)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ margin: 0, fontSize: '1rem' }}>Upload Contract ABI</h2>
+          <div className="bg-ds-panel border border-solid border-ds-border rounded-lg p-6 w-full max-w-[480px] shadow-[0_0_24px_rgba(43,217,111,0.15)] flex flex-col gap-4 font-ds-sans text-ds-text text-left">
+            <div className="flex justify-between items-center">
+              <h2 className="m-0 font-ds-mono text-sm font-bold text-ds-green uppercase tracking-wider">
+                Upload Contract ABI
+              </h2>
               <button
                 onClick={() => setOpen(false)}
-                style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '1.25rem', lineHeight: 1 }}
-              >×</button>
+                className="bg-transparent border-0 text-ds-text-3 hover:text-ds-text cursor-pointer text-xl outline-none"
+              >
+                &times;
+              </button>
             </div>
 
-            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--muted)' }}>
-              Paste the JSON ABI array from Hardhat, Foundry, or Etherscan.
-              Enables named event decoding and event dropdown in alert rules.
+            <p className="m-0 text-xs text-ds-text-3 font-ds-sans leading-relaxed">
+              Paste the JSON ABI array from Hardhat, Foundry, or Etherscan. Enables named event decoding and event dropdown in alert rules.
             </p>
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4 m-0">
               <textarea
                 value={abiText}
                 onChange={(e) => setAbiText(e.target.value)}
                 required
                 rows={10}
                 placeholder={'[\n  {\n    "type": "event",\n    "name": "Transfer",\n    "inputs": [...]\n  }\n]'}
-                style={{
-                  background: 'var(--bg)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 4,
-                  color: 'var(--text)',
-                  fontFamily: 'var(--mono)',
-                  fontSize: '0.75rem',
-                  padding: '0.5rem',
-                  resize: 'vertical',
-                  width: '100%',
-                  boxSizing: 'border-box',
-                }}
+                className="w-full bg-ds-shell border border-solid border-ds-border rounded p-3 text-xs font-ds-mono text-ds-text focus:border-ds-green outline-none resize-y min-h-[160px]"
               />
               {error && (
-                <p style={{ margin: 0, fontSize: '0.8125rem', color: '#f87171' }}>{error}</p>
+                <p className="m-0 text-xs text-ds-red font-ds-mono">{error}</p>
               )}
               <button
                 type="submit"
                 disabled={loading}
-                style={{
-                  padding: '0.5rem',
-                  background: loading ? 'var(--border)' : 'var(--accent)',
-                  color: '#0f172a',
-                  border: 'none',
-                  borderRadius: 4,
-                  fontWeight: 700,
-                  fontSize: '0.875rem',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                }}
+                className="w-full py-2 bg-ds-green text-ds-shell font-bold rounded cursor-pointer hover:bg-ds-green/90 transition-all font-ds-mono uppercase text-xs tracking-wider disabled:bg-ds-border disabled:text-ds-text-3 disabled:cursor-not-allowed border-0"
               >
                 {loading ? 'Uploading…' : 'Upload ABI'}
               </button>

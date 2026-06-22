@@ -97,7 +97,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               Overview
             </a>
             <a
-              href="/dashboard"
+              href="/dashboard/contracts"
               className="flex items-center gap-3 px-3 py-2 text-ds-text-2 hover:text-ds-green hover:bg-ds-panel-2 rounded transition-all font-ds-mono text-xs no-underline"
             >
               Contracts
@@ -119,7 +119,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               Workspace
             </div>
             <a
-              href="/dashboard/add-contract"
+              href="/dashboard/contracts?add=true"
               className="mx-3 mt-2 border border-solid border-ds-green text-ds-green bg-transparent font-ds-mono text-xs py-2 hover:bg-ds-green/10 text-center rounded transition-all no-underline"
             >
               DEPLOY NEW
@@ -171,7 +171,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <span className="font-ds-mono text-[9px] uppercase tracking-wider font-bold">Explorer</span>
           </a>
           <a
-            href="/dashboard/add-contract"
+            href="/dashboard/contracts?add=true"
             className="flex flex-col items-center justify-center text-ds-text-3 hover:text-ds-green active:scale-95 transition-all no-underline gap-1"
           >
             <span className="font-ds-mono text-[9px] uppercase tracking-wider font-bold">Add</span>
