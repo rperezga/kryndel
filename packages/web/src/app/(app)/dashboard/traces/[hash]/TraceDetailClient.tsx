@@ -68,7 +68,7 @@ function formatWei(raw: unknown): string {
   if (raw == null) return '—';
   try {
     const n = BigInt(String(raw));
-    if (n === 0n) return '0 ETH';
+    if (n === BigInt(0)) return '0 ETH';
     // Show in ETH with 6 decimal places
     const eth = Number(n) / 1e18;
     return `${eth.toFixed(6)} XRP`;
