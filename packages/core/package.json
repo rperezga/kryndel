@@ -15,4 +15,5 @@
   "scripts": {
     "build": "tsc"
   },
-  "dep
+  "license": "Apache-2.0"
+}
