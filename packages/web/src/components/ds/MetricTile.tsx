@@ -59,15 +59,15 @@ export function MetricTile({
         )}
       </div>
 
-      {/* Main section: Numeric/Text value */}
-      <div className="flex items-baseline justify-between mt-1">
-        <span className="font-ds-mono text-2xl font-bold text-ds-text tracking-tight tabular-nums select-all">
+      {/* Main section: Numeric/Text value + delta (wraps on narrow tiles) */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1 mt-1 min-w-0">
+        <span className="font-ds-mono text-2xl font-bold text-ds-text tracking-tight tabular-nums select-all shrink-0">
           {value}
         </span>
 
-        {/* Delta change / trend */}
+        {/* Delta / trend — drops to new line on <140px tiles */}
         {delta !== undefined && (
-          <div className="flex items-center gap-1 font-ds-mono text-[10px] font-bold select-none">
+          <div className="flex items-center gap-1 font-ds-mono text-[10px] font-bold select-none shrink-0">
             {trend && (
               <span className={cn(trendColors[trend])}>
                 {trendSymbol[trend]}

@@ -1,6 +1,6 @@
 {
   "name": "@kryndel/core",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "description": "Kryndel core — watcher, decoder, indexer, recorder, subscriber & alerts for XRPL contract observability",
   "type": "module",
   "main": "dist/index.js",
@@ -15,8 +15,4 @@
   "scripts": {
     "build": "tsc"
   },
-  "dependencies": {
-    "viem": "^2.21.0"
-  },
-  "license": "Apache-2.0"
-}
+  "dep

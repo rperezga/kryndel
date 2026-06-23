@@ -749,16 +749,28 @@ body {
 
 /* ── Focus-visible for ALL interactive elements ─────────── */
 /* Ensures keyboard navigation is always visible (WCAG 2.4.7) */
-:focus-visible {
-  outline: 2px solid var(--signal);
-  outline-offset: 3px;
+/* WCAG 2.4.7 — all interactive elements get visible focus ring */
+/* DS app context: uses --ds-green (#2bd96f) */
+:where(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--ds-green);
+  outline-offset: 2px;
   border-radius: 3px;
 }
-/* Marketing context: use green instead of signal teal */
+/* Suppress :focus (mouse click) — keyboard-only ring */
+:where(button, [role="button"], a, input, select, textarea):focus:not(:focus-visible) {
+  outline: none;
+}
+/* Marketing surface: uses marketing green */
 .mkt-header :focus-visible,
 .mkt-footer :focus-visible,
 .mkt-hero   :focus-visible,
 .mkt-section :focus-visible,
 .mkt-final  :focus-visible {
   outline-color: var(--mkt-green);
+}
+/* FAQ accordion summary */
+details > summary:focus-visible {
+  outline: 2px solid var(--ds-green);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
