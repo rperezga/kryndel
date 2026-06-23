@@ -15,5 +15,8 @@
   "scripts": {
     "build": "tsc"
   },
+  "dependencies": {
+    "viem": "^2.21.0"
+  },
   "license": "Apache-2.0"
 }

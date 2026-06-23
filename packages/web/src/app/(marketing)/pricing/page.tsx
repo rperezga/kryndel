@@ -31,7 +31,7 @@ const faqItems = [
   },
   {
     q: 'What alert channels does Pro include?',
-    a: 'Telegram (Free + Pro), Slack (Pro), Discord (Pro), email (Pro), and signed outbound webhooks (Pro) for custom integrations.',
+    a: 'Telegram (Free + Pro) and signed outbound webhooks (Pro) for custom integrations are live today. Slack, Discord and email are on the roadmap.',
   },
   {
     q: 'What is the REST API and SDK?',
@@ -151,7 +151,7 @@ export default async function PricingPage() {
                   <span className="text-ds-green">✓</span> 20 contracts watched
                 </li>
                 <li className="flex items-center gap-2 font-ds-mono text-[11px] text-ds-text">
-                  <span className="text-ds-green">✓</span> Slack, Discord, Telegram, email
+                  <span className="text-ds-green">✓</span> Telegram &amp; webhooks (Slack, Discord, email soon)
                 </li>
                 <li className="flex items-center gap-2 font-ds-mono text-[11px] text-ds-text">
                   <span className="text-ds-green">✓</span> 90-day event history
