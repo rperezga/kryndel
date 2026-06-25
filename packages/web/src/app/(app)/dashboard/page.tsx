@@ -69,6 +69,18 @@ export default async function DashboardPage({
     failedCallsCount = failedCalls + failedEvents;
   }
 
+  // 4b. Events indexed in the last 24h (activity volume — real signal of pipeline life)
+  let events24hCount = 0;
+  if (userAddresses.length > 0) {
+    events24hCount = await db.collection('events').countDocuments({
+      $or: [
+        { contractAddress: { $in: userAddresses } },
+        { contract: { $in: userAddresses } },
+      ],
+      indexedAt: { $gte: cutoff24h },
+    });
+  }
+
   // 5. Fetch recent webhook deliveries & map to endpoints
   const deliveries = await db
     .collection('webhook_deliveries')
@@ -288,10 +300,10 @@ export default async function DashboardPage({
           status={failedCallsCount > 0 ? 'fail' : 'ok'}
         />
         <MetricTile
-          label="Webhook p95"
-          value="—"
-          delta="no data"
-          status="neutral"
+          label="Events 24h"
+          value={userAddresses.length > 0 ? events24hCount : '—'}
+          delta="Indexed"
+          status={events24hCount > 0 ? 'ok' : 'neutral'}
         />
         <MetricTile
           label="Indexer Health"

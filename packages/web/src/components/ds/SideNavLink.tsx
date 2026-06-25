@@ -23,7 +23,7 @@ export function SideNavLink({ href, children, className = '', exact = false }: P
     <a
       href={href}
       aria-current={isActive ? 'page' : undefined}
-      className={`${className} ${isActive ? 'text-ds-green bg-ds-panel-2' : ''}`}
+      className={`${className} ${isActive ? '!text-ds-green bg-ds-green/10 font-bold' : ''}`}
     >
       {children}
     </a>

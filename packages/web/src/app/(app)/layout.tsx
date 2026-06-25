@@ -3,6 +3,7 @@ import { signOut } from '@/auth';
 import { ChainSelector } from '@/components/ds/ChainSelector';
 import { HeaderSearchTrigger } from '@/components/ds/HeaderSearchTrigger';
 import { CommandPalette } from '@/components/ds/CommandPalette';
+import { SideNavLink } from '@/components/ds/SideNavLink';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser();
@@ -97,58 +98,59 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <div className="px-3 py-2 text-ds-text-3 font-ds-mono text-[10px] font-bold uppercase tracking-wider select-none">
               Monitoring
             </div>
-            <a
+            <SideNavLink
               href="/dashboard"
+              exact
               className="flex items-center gap-3 px-3 py-2 text-ds-text-2 hover:text-ds-green hover:bg-ds-panel-2 rounded transition-all font-ds-mono text-xs no-underline"
             >
               Overview
-            </a>
-            <a
+            </SideNavLink>
+            <SideNavLink
               href="/dashboard/contracts"
               className="flex items-center gap-3 px-3 py-2 text-ds-text-2 hover:text-ds-green hover:bg-ds-panel-2 rounded transition-all font-ds-mono text-xs no-underline"
             >
               Contracts
-            </a>
-            <a
+            </SideNavLink>
+            <SideNavLink
               href="/dashboard/rules"
               className="flex items-center gap-3 px-3 py-2 text-ds-text-2 hover:text-ds-green hover:bg-ds-panel-2 rounded transition-all font-ds-mono text-xs no-underline"
             >
               Alerts
-            </a>
-            <a
+            </SideNavLink>
+            <SideNavLink
               href="/dashboard/events"
               className="flex items-center gap-3 px-3 py-2 text-ds-text-2 hover:text-ds-green hover:bg-ds-panel-2 rounded transition-all font-ds-mono text-xs no-underline"
             >
               Events
-            </a>
-            <a
+            </SideNavLink>
+            <SideNavLink
               href="/dashboard/traces"
               className="flex items-center gap-3 px-3 py-2 text-ds-text-2 hover:text-ds-green hover:bg-ds-panel-2 rounded transition-all font-ds-mono text-xs no-underline"
             >
               Tx Traces
-            </a>
-            <a
+            </SideNavLink>
+            <SideNavLink
               href="/dashboard/webhooks"
               className="flex items-center gap-3 px-3 py-2 text-ds-text-2 hover:text-ds-green hover:bg-ds-panel-2 rounded transition-all font-ds-mono text-xs no-underline"
             >
               Webhooks
-            </a>
-            <a
+            </SideNavLink>
+            <SideNavLink
               href="/explorer"
               className="flex items-center gap-3 px-3 py-2 text-ds-text-2 hover:text-ds-green hover:bg-ds-panel-2 rounded transition-all font-ds-mono text-xs no-underline"
             >
               Explorer
-            </a>
+            </SideNavLink>
 
             <div className="px-3 py-2 text-ds-text-3 font-ds-mono text-[10px] font-bold uppercase tracking-wider mt-6 select-none">
               Workspace
             </div>
-            <a
+            <SideNavLink
               href="/dashboard/settings"
               className="flex items-center gap-3 px-3 py-2 text-ds-text-2 hover:text-ds-green hover:bg-ds-panel-2 rounded transition-all font-ds-mono text-xs no-underline"
             >
               Settings
-            </a>
+            </SideNavLink>
             <a
               href="/dashboard/contracts?add=true"
               className="mx-3 mt-2 border border-solid border-ds-green text-ds-green bg-transparent font-ds-mono text-xs py-2 hover:bg-ds-green/10 text-center rounded transition-all no-underline"
@@ -158,16 +160,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </nav>
 
           {/* Footer links */}
-          <div className="px-6 pt-4 border-t border-solid border-ds-border/30 flex flex-col gap-2">
+          <div className="px-6 pt-4 border-t border-solid border-ds-border flex flex-col gap-1">
             <a
               href="/docs"
-              className="flex items-center gap-2 text-ds-text-3 hover:text-ds-green font-ds-mono text-[11px] no-underline transition-colors"
+              className="flex items-center gap-2 text-ds-text-3 hover:text-ds-green font-ds-mono text-[11px] no-underline transition-colors rounded px-1 -mx-1 py-0.5 focus-visible:outline-none focus-visible:bg-ds-panel-2 focus-visible:text-ds-green"
             >
               Documentation ↗
             </a>
             <a
               href="/status"
-              className="flex items-center gap-2 text-ds-text-3 hover:text-ds-green font-ds-mono text-[11px] no-underline transition-colors"
+              className="flex items-center gap-2 text-ds-text-3 hover:text-ds-green font-ds-mono text-[11px] no-underline transition-colors rounded px-1 -mx-1 py-0.5 focus-visible:outline-none focus-visible:bg-ds-panel-2 focus-visible:text-ds-green"
             >
               System Status ↗
             </a>
