@@ -95,91 +95,63 @@ export default function DocsClient() {
     };
   }, [activeTab]);
 
+  // Helper: sidebar nav button — minimal, no boxes
+  const NavBtn = ({ id, label }: { id: string; label: string }) => {
+    const active = activeTab === id;
+    return (
+      <button
+        onClick={() => setActiveTab(id)}
+        className={`w-full text-left py-1.5 pl-3 text-xs font-ds-mono transition-colors focus-visible:outline-none border-l-2 border-solid ${
+          active
+            ? 'border-ds-green text-ds-green'
+            : 'border-transparent text-ds-text-3 hover:text-ds-text-2 hover:border-ds-border'
+        }`}
+      >
+        {label}
+      </button>
+    );
+  };
+
   return (
-    <div className="flex min-h-[calc(100vh-62px)] bg-ds-shell text-ds-text">
-      {/* Sidebar for Quickstarts — Hidden if Reference is selected to avoid double sidebars */}
+    <div className="wrap" style={{ paddingTop: '3rem', paddingBottom: '4rem' }}>
+      <div className="flex gap-12 min-h-[calc(100vh-62px)]">
+
+      {/* Sidebar */}
       {activeTab !== 'api-reference' && (
-        <aside className="w-64 border-r border-ds-border bg-ds-panel hidden md:flex flex-col gap-4 p-6 shrink-0">
-          <div className="mb-6 px-2">
-            <div className="font-ds-mono text-xs font-bold text-ds-green uppercase tracking-widest opacity-60 mb-2">Documentation</div>
-            <div className="flex items-center gap-2 text-ds-text-2 font-ds-mono text-[11px]">
-              <span>v0.4.0 Stable</span>
+        <aside className="w-52 shrink-0 hidden md:block">
+          <div className="sticky top-[80px]">
+            <div className="mb-8">
+              <p className="font-ds-mono text-[10px] text-ds-green/60 uppercase tracking-widest font-bold mb-1">Documentation</p>
+              <p className="font-ds-mono text-[10px] text-ds-text-3">v0.4.0 Stable</p>
             </div>
+            <nav className="space-y-6">
+              <div>
+                <p className="font-ds-mono text-[9px] text-ds-text-3/60 uppercase tracking-widest mb-2 font-bold">Platform</p>
+                <div className="flex flex-col gap-0.5">
+                  <NavBtn id="getting-started" label="Getting started" />
+                  <NavBtn id="xrpl-evm"        label="XRPL EVM" />
+                  <NavBtn id="xls-0101"         label="XLS-0101" />
+                </div>
+              </div>
+              <div>
+                <p className="font-ds-mono text-[9px] text-ds-text-3/60 uppercase tracking-widest mb-2 font-bold">Data Ingestion</p>
+                <div className="flex flex-col gap-0.5">
+                  <NavBtn id="webhooks" label="Webhooks Signing" />
+                </div>
+              </div>
+              <div>
+                <p className="font-ds-mono text-[9px] text-ds-text-3/60 uppercase tracking-widest mb-2 font-bold">Reference</p>
+                <div className="flex flex-col gap-0.5">
+                  <NavBtn id="api-reference" label="API Reference" />
+                </div>
+              </div>
+            </nav>
           </div>
-          <nav className="space-y-6">
-            <div>
-              <div className="font-ds-mono text-[10px] text-ds-text-3 uppercase tracking-wider mb-2 font-bold">Platform</div>
-              <div className="flex flex-col gap-1">
-                <button
-                  onClick={() => setActiveTab('getting-started')}
-                  className={`w-full flex items-center py-2 px-3 rounded text-left text-xs font-ds-mono transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ds-green ${
-                    activeTab === 'getting-started'
-                      ? 'bg-ds-border-on text-ds-green border-r-2 border-ds-green'
-                      : 'text-ds-text-2 hover:bg-ds-panel-2'
-                  }`}
-                >
-                  Getting started
-                </button>
-                <button
-                  onClick={() => setActiveTab('xrpl-evm')}
-                  className={`w-full flex items-center py-2 px-3 rounded text-left text-xs font-ds-mono transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ds-green ${
-                    activeTab === 'xrpl-evm'
-                      ? 'bg-ds-border-on text-ds-green border-r-2 border-ds-green'
-                      : 'text-ds-text-2 hover:bg-ds-panel-2'
-                  }`}
-                >
-                  XRPL EVM
-                </button>
-                <button
-                  onClick={() => setActiveTab('xls-0101')}
-                  className={`w-full flex items-center py-2 px-3 rounded text-left text-xs font-ds-mono transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ds-green ${
-                    activeTab === 'xls-0101'
-                      ? 'bg-ds-border-on text-ds-green border-r-2 border-ds-green'
-                      : 'text-ds-text-2 hover:bg-ds-panel-2'
-                  }`}
-                >
-                  XLS-0101
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <div className="font-ds-mono text-[10px] text-ds-text-3 uppercase tracking-wider mb-2 font-bold">Data Ingestion</div>
-              <div className="flex flex-col gap-1">
-                <button
-                  onClick={() => setActiveTab('webhooks')}
-                  className={`w-full flex items-center py-2 px-3 rounded text-left text-xs font-ds-mono transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ds-green ${
-                    activeTab === 'webhooks'
-                      ? 'bg-ds-border-on text-ds-green border-r-2 border-ds-green'
-                      : 'text-ds-text-2 hover:bg-ds-panel-2'
-                  }`}
-                >
-                  Webhooks Signing
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <div className="font-ds-mono text-[10px] text-ds-text-3 uppercase tracking-wider mb-2 font-bold">Reference</div>
-              <div className="flex flex-col gap-1">
-                <button
-                  onClick={() => setActiveTab('api-reference')}
-                  className={`w-full flex items-center py-2 px-3 rounded text-left text-xs font-ds-mono transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ds-green ${
-                    activeTab === 'api-reference'
-                      ? 'bg-ds-border-on text-ds-green border-r-2 border-ds-green'
-                      : 'text-ds-text-2 hover:bg-ds-panel-2'
-                  }`}
-                >
-                  API Reference
-                </button>
-              </div>
-            </div>
-          </nav>
         </aside>
       )}
 
-      {/* Main Content Area */}
-      <main className="flex-1 bg-ds-shell overflow-y-auto px-6 py-8 md:px-12">
+      {/* Main Content */}
+      <main className="flex-1 min-w-0">
         {/* Mobile Tab Selector dropdown */}
         {activeTab !== 'api-reference' && (
           <div className="block md:hidden mb-6">
@@ -379,6 +351,7 @@ function verifySignature(payload, signatureHeader, secret) {
           )}
         </article>
       </main>
+      </div>
     </div>
   );
 }
