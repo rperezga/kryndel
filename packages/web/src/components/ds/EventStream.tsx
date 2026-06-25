@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import { cn } from './cn';
 import { LivePill, PhosphorPulse } from './LiveIndicator';
 import { Button } from './Button';
@@ -76,14 +75,6 @@ export function EventStream({
     setShowResumeButton(false);
   };
 
-  // Virtualizer for high performance rendering of massive logs
-  const rowVirtualizer = useVirtualizer({
-    count: events.length,
-    getScrollElement: () => containerRef.current,
-    estimateSize: () => 70, // Estimate height per event row card
-    overscan: 5,
-  });
-
   return (
     <div
       className={cn(
@@ -107,68 +98,54 @@ export function EventStream({
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto custom-scrollbar p-3"
+        className="flex-1 overflow-y-auto custom-scrollbar p-3 flex flex-col gap-2"
         style={{ maxHeight }}
       >
-        <div
-          style={{
-            height: `${rowVirtualizer.getTotalSize()}px`,
-            width: '100%',
-            position: 'relative',
-          }}
-        >
-          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-            const event = events[virtualRow.index];
-            return (
-              <div
-                key={event.id}
-                className="absolute top-0 left-0 w-full p-1"
-                style={{
-                  height: `${virtualRow.size}px`,
-                  transform: `translateY(${virtualRow.start}px)`,
-                }}
-              >
-                <PhosphorPulse active={!!event.isNew}>
-                  <div
-                    className={cn(
-                      'flex items-start justify-between bg-ds-shell border border-solid border-ds-border/60 rounded-md p-3 transition-colors duration-150 hover:bg-ds-panel-2/20',
-                      event.isNew ? 'border-ds-green/40' : ''
+        {events.length === 0 && (
+          <div className="text-center py-8 font-ds-mono text-[11px] text-ds-text-3 select-none">
+            — no events yet —
+          </div>
+        )}
+
+        {events.map((event) => (
+          <PhosphorPulse key={event.id} active={!!event.isNew}>
+            <div
+              className={cn(
+                'flex items-start justify-between bg-ds-shell border border-solid border-ds-border/60 rounded-md p-3 transition-colors duration-150 hover:bg-ds-panel-2/20',
+                event.isNew ? 'border-ds-green/40' : ''
+              )}
+            >
+              <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+                {/* Event Row Header: Type + Timestamp */}
+                <div className="flex items-center gap-2 select-none">
+                  <span className="font-ds-mono text-[10px] font-bold text-ds-green uppercase tracking-wide">
+                    {event.type}
+                  </span>
+                  <span className="font-ds-mono text-[9px] text-ds-text-3">
+                    {event.timestamp}
+                  </span>
+                </div>
+
+                {/* Event Row Content Description (solo si hay algo útil) */}
+                {event.description && (
+                  <p className="font-ds-sans text-xs text-ds-text-2 leading-relaxed truncate pr-4">
+                    {event.description}
+                  </p>
+                )}
+
+                {/* Event Row Metadata Actions (Pills) */}
+                {(event.address || event.hash) && (
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    {event.address && <AddressPill address={event.address} />}
+                    {event.hash && (
+                      <TxPill hash={event.hash} status={event.status} />
                     )}
-                  >
-                    <div className="flex flex-col gap-1.5 min-w-0 flex-1">
-                      {/* Event Row Header: Type + Timestamp */}
-                      <div className="flex items-center gap-2 select-none">
-                        <span className="font-ds-mono text-[10px] font-bold text-ds-green uppercase tracking-wide">
-                          {event.type}
-                        </span>
-                        <span className="font-ds-mono text-[9px] text-ds-text-3">
-                          {event.timestamp}
-                        </span>
-                      </div>
-
-                      {/* Event Row Content Description */}
-                      <p className="font-ds-sans text-xs text-ds-text-2 leading-relaxed truncate pr-4">
-                        {event.description}
-                      </p>
-
-                      {/* Event Row Metadata Actions (Pills) */}
-                      {(event.address || event.hash) && (
-                        <div className="flex flex-wrap items-center gap-2 mt-1">
-                          {event.address && (
-                            <AddressPill address={event.address} />
-                          )}
-                          {event.hash && (
-                            <TxPill hash={event.hash} status={event.status} />
-                          )}
-                        </div>
-                      )}
-                    </div>
                   </div>
-                </PhosphorPulse>
+                )}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          </PhosphorPulse>
+        ))}
       </div>
 
       {/* Floating "Resume live" button panel */}

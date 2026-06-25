@@ -23,7 +23,7 @@ function formatDbEvent(e: any): StreamEvent {
       .map(([k, v]) => `${k}=${String(v).slice(0, 15)}`)
       .join(', ')}`;
   } else {
-    description = `Event logs successfully processed on-chain.`;
+    description = '';
   }
 
   return {
