@@ -96,7 +96,7 @@ export default function DocsClient() {
   }, [activeTab]);
 
   return (
-    <div className="flex min-h-screen bg-ds-shell text-ds-text">
+    <div className="flex min-h-[calc(100vh-62px)] bg-ds-shell text-ds-text">
       {/* Sidebar for Quickstarts — Hidden if Reference is selected to avoid double sidebars */}
       {activeTab !== 'api-reference' && (
         <aside className="w-64 border-r border-ds-border bg-ds-panel hidden md:flex flex-col gap-4 p-6 shrink-0">
