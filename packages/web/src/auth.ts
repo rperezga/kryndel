@@ -68,12 +68,69 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           to:      [email],
           subject: 'Sign in to Kryndel',
           html: `
-            <div style="font-family:monospace;max-width:480px;margin:40px auto;padding:24px;border:1px solid #1e293b;border-radius:8px;background:#0f172a;color:#e2e8f0">
-              <div style="font-size:20px;font-weight:700;color:#f97316;margin-bottom:16px">kryndel<span style="color:#e2e8f0">.cloud</span></div>
-              <p style="margin:0 0 24px">Click the link below to sign in. The link expires in 10 minutes.</p>
-              <a href="${url}" style="display:inline-block;padding:10px 20px;background:#f97316;color:#0f172a;font-weight:700;text-decoration:none;border-radius:6px;font-size:14px">Sign in to Kryndel</a>
-              <p style="margin:24px 0 0;font-size:12px;color:#64748b">If you didn't request this, you can ignore this email.</p>
-            </div>
+            <!DOCTYPE html>
+            <html lang="en">
+            <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+            <body style="margin:0;padding:0;background:#050706;font-family:ui-monospace,'Cascadia Code','Fira Mono',monospace">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#050706;padding:40px 16px">
+                <tr><td align="center">
+                  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:440px;background:#090d0a;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:36px">
+
+                    <!-- Branding -->
+                    <tr><td style="padding-bottom:28px">
+                      <table cellpadding="0" cellspacing="0"><tr>
+                        <td style="padding-right:8px;vertical-align:middle">
+                          <div style="width:8px;height:8px;border-radius:50%;background:#2bd96f;display:inline-block"></div>
+                        </td>
+                        <td style="vertical-align:middle">
+                          <span style="font-size:13px;font-weight:700;color:#2bd96f;text-transform:uppercase;letter-spacing:.05em">KRYNDEL</span><span style="font-size:13px;font-weight:400;color:rgba(232,245,236,.4)">.DEV</span>
+                        </td>
+                      </tr></table>
+                    </td></tr>
+
+                    <!-- Heading -->
+                    <tr><td style="padding-bottom:8px">
+                      <p style="margin:0;font-size:18px;font-weight:700;color:#e8f5ec;font-family:ui-sans-serif,system-ui,sans-serif">Sign in to Kryndel</p>
+                    </td></tr>
+
+                    <!-- Subtitle -->
+                    <tr><td style="padding-bottom:28px">
+                      <p style="margin:0;font-size:11px;color:rgba(232,245,236,.4);text-transform:uppercase;letter-spacing:.1em">SECURE_AUTH_LAYER: V4.2.0-STABLE</p>
+                    </td></tr>
+
+                    <!-- Body -->
+                    <tr><td style="padding-bottom:28px">
+                      <p style="margin:0;font-size:13px;color:rgba(232,245,236,.65);line-height:1.6">Click the button below to sign in. This link expires in <strong style="color:#e8f5ec">10 minutes</strong> and can only be used once.</p>
+                    </td></tr>
+
+                    <!-- CTA Button -->
+                    <tr><td style="padding-bottom:28px">
+                      <a href="${url}" style="display:inline-block;padding:12px 28px;background:#2bd96f;color:#050706;font-weight:700;text-decoration:none;border-radius:6px;font-size:13px;letter-spacing:.03em">
+                        Sign in to Kryndel →
+                      </a>
+                    </td></tr>
+
+                    <!-- Divider -->
+                    <tr><td style="padding-bottom:20px;border-top:1px solid rgba(255,255,255,.06)"></td></tr>
+
+                    <!-- Footer -->
+                    <tr><td>
+                      <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                        <td>
+                          <div style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#2bd96f;vertical-align:middle;margin-right:6px"></div>
+                          <span style="font-size:10px;color:rgba(43,217,111,.6);text-transform:uppercase;letter-spacing:.1em;vertical-align:middle">SYSTEM READY</span>
+                        </td>
+                        <td align="right">
+                          <span style="font-size:10px;color:rgba(232,245,236,.2)">If you didn't request this, ignore this email.</span>
+                        </td>
+                      </tr></table>
+                    </td></tr>
+
+                  </table>
+                </td></tr>
+              </table>
+            </body>
+            </html>
           `,
         });
 
