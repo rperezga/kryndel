@@ -117,11 +117,11 @@ export function EventStream({
             >
               <div className="flex flex-col gap-1.5 min-w-0 flex-1">
                 {/* Event Row Header: Type + Timestamp */}
-                <div className="flex items-center gap-2 select-none">
-                  <span className="font-ds-mono text-[10px] font-bold text-ds-green uppercase tracking-wide">
+                <div className="flex items-center gap-2 select-none min-w-0">
+                  <span className="font-ds-mono text-[10px] font-bold text-ds-green uppercase tracking-wide truncate min-w-0">
                     {event.type}
                   </span>
-                  <span className="font-ds-mono text-[9px] text-ds-text-3">
+                  <span className="font-ds-mono text-[9px] text-ds-text-3 shrink-0 ml-auto">
                     {event.timestamp}
                   </span>
                 </div>
