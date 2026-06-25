@@ -101,10 +101,10 @@ export default function DocsClient() {
     return (
       <button
         onClick={() => setActiveTab(id)}
-        className={`w-full text-left py-1.5 pl-3 text-xs font-ds-mono transition-colors focus-visible:outline-none border-l-2 border-solid ${
+        className={`w-full text-left py-1.5 pl-3 text-xs font-ds-mono bg-transparent border-0 border-l-2 border-solid cursor-pointer transition-colors focus-visible:outline-none ${
           active
             ? 'border-ds-green text-ds-green'
-            : 'border-transparent text-ds-text-3 hover:text-ds-text-2 hover:border-ds-border'
+            : 'border-transparent text-ds-text-3 hover:text-ds-text-2 hover:border-ds-text-3'
         }`}
       >
         {label}
