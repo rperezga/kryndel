@@ -250,12 +250,12 @@ export default function LandingPage() {
         </section>
 
         {/* ── PRICING TEASER ──────────────────────── */}
-        <section id="pricing" className="mkt-section" aria-labelledby="pricing-heading">
+        <section id="pricing" className="mkt-section" style={{ textAlign: 'center' }} aria-labelledby="pricing-heading">
           <p className="mkt-eyebrow" aria-hidden="true">Pricing</p>
           <h2 id="pricing-heading" className="mkt-h2">Start free. Upgrade when you scale.</h2>
-          <p className="mkt-lead">No card to start. Cancel anytime.</p>
+          <p className="mkt-lead" style={{ margin: '0 auto 40px' }}>No card to start. Cancel anytime.</p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-[18px] max-w-[760px] mx-auto w-full list-none p-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-[18px] max-w-[760px] mx-auto w-full list-none p-0" style={{ textAlign: 'left' }}>
             {/* Free tier */}
             <article className="bg-ds-panel border border-solid border-ds-border rounded-[16px] p-7 flex flex-col" aria-label="Free plan">
               <p className="font-ds-mono text-ds-text-2 text-[13px] mb-1.5">Free</p>
@@ -311,7 +311,7 @@ export default function LandingPage() {
           </div>
 
           {/* XLS-0101 Honest Notice */}
-          <div className="text-ds-amber bg-[rgba(255,176,32,0.05)] border border-solid border-[#4a3a14] rounded-[11px] px-4 py-3.25 mt-[30px] inline-block font-ds-mono text-[12.5px] leading-relaxed">
+          <div className="text-ds-amber bg-[rgba(255,176,32,0.05)] border border-solid border-[#4a3a14] rounded-[11px] px-4 py-3.25 mt-[30px] inline-block font-ds-mono text-[12.5px] leading-relaxed" style={{ textAlign: 'left' }}>
             native XLS-0101: watcher ready · full decode pending AlphaNet — shown honestly, never faked.
           </div>
         </section>
