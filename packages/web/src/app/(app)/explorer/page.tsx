@@ -1,6 +1,7 @@
 /**
- * /explorer — moved to (marketing) group so it shares the marketing header/nav.
- * Same data fetching as before; ExplorerHomeClient handles all UI.
+ * /explorer — public contract explorer, inside the (app) shell so it shares the
+ * app header + sidebar + bottom-nav with the rest of the dashboard (consistent layout).
+ * Same data fetching as before; ExplorerHomeClient handles all UI (DS tokens).
  */
 import type { Metadata } from 'next';
 import { getDb } from '@/lib/db';
@@ -48,7 +49,7 @@ export default async function ExplorerPage() {
           operatingSystem: 'Web',
         }) }}
       />
-      <div className="wrap" style={{ paddingTop: '3rem', paddingBottom: '4rem' }}>
+      <div className="max-w-5xl mx-auto w-full">
         <ExplorerHomeClient
           latestEvents={ser(latestEvents)}
           latestTraces={ser(latestTraces)}
