@@ -4,6 +4,7 @@ import { ChainSelector } from '@/components/ds/ChainSelector';
 import { HeaderSearchTrigger } from '@/components/ds/HeaderSearchTrigger';
 import { CommandPalette } from '@/components/ds/CommandPalette';
 import { SideNavLink } from '@/components/ds/SideNavLink';
+import { MobileBottomNav } from '@/components/ds/MobileBottomNav';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser();
@@ -182,78 +183,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {children}
       </main>
 
-      {/* ── Mobile Navigation Bar (Mobile Only) — Etapa 13 ── */}
-      {/* 5 items: Home · Alerts · Explorer · Contracts · More */}
-      {isLoggedIn && (
-        <nav
-          aria-label="Mobile navigation"
-          className="fixed bottom-0 left-0 w-full bg-ds-panel border-t border-solid border-ds-border flex justify-around items-stretch px-1 z-50 md:hidden"
-          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-        >
-          {/* Home */}
-          <a
-            href="/dashboard"
-            className="flex flex-col items-center justify-center py-2.5 px-2 min-w-0 flex-1 text-ds-text-3 hover:text-ds-green active:scale-95 transition-all no-underline gap-1"
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <path d="M3 9.5L10 3l7 6.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinejoin="round"/>
-              <path d="M7.5 18V13h5v5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-            </svg>
-            <span className="font-ds-mono text-[8px] uppercase tracking-wider font-bold">Home</span>
-          </a>
-
-          {/* Alerts */}
-          <a
-            href="/dashboard/rules"
-            className="flex flex-col items-center justify-center py-2.5 px-2 min-w-0 flex-1 text-ds-text-3 hover:text-ds-green active:scale-95 transition-all no-underline gap-1"
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <path d="M10 2a6 6 0 016 6c0 3.3.9 5.5 1.7 6.5H2.3C3.1 13.5 4 11.3 4 8a6 6 0 016-6z" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinejoin="round"/>
-              <path d="M8.3 16.5a1.7 1.7 0 003.4 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-            <span className="font-ds-mono text-[8px] uppercase tracking-wider font-bold">Alerts</span>
-          </a>
-
-          {/* Explorer — center, slightly larger */}
-          <a
-            href="/explorer"
-            className="flex flex-col items-center justify-center py-2 px-3 min-w-0 flex-1 text-ds-green active:scale-95 transition-all no-underline gap-1 relative"
-          >
-            <div className="w-10 h-10 rounded-full bg-ds-green/10 border border-solid border-ds-green/30 flex items-center justify-center -mt-4">
-              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M13.5 13.5L17 17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-            </div>
-            <span className="font-ds-mono text-[8px] uppercase tracking-wider font-bold">Explorer</span>
-          </a>
-
-          {/* Contracts */}
-          <a
-            href="/dashboard/contracts"
-            className="flex flex-col items-center justify-center py-2.5 px-2 min-w-0 flex-1 text-ds-text-3 hover:text-ds-green active:scale-95 transition-all no-underline gap-1"
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-              <path d="M6.5 7h7M6.5 10h7M6.5 13h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-            </svg>
-            <span className="font-ds-mono text-[8px] uppercase tracking-wider font-bold">Contracts</span>
-          </a>
-
-          {/* More — links to settings */}
-          <a
-            href="/dashboard/settings"
-            className="flex flex-col items-center justify-center py-2.5 px-2 min-w-0 flex-1 text-ds-text-3 hover:text-ds-green active:scale-95 transition-all no-underline gap-1"
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <circle cx="5" cy="10" r="1.5" fill="currentColor"/>
-              <circle cx="10" cy="10" r="1.5" fill="currentColor"/>
-              <circle cx="15" cy="10" r="1.5" fill="currentColor"/>
-            </svg>
-            <span className="font-ds-mono text-[8px] uppercase tracking-wider font-bold">More</span>
-          </a>
-        </nav>
-      )}
+      {/* ── Mobile Navigation Bar (Mobile Only) — active-aware ── */}
+      {isLoggedIn && <MobileBottomNav />}
 
       {/* ── Command Palette dialog container ── */}
       <CommandPalette />
