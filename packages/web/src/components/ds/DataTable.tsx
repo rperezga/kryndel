@@ -281,10 +281,22 @@ export function DataTable<TData, TValue>({
           maxHeight: virtualized ? '500px' : 'none',
         }}
       >
-        <table className="w-full border-collapse text-left table-fixed">
-          {renderHeader()}
-          {loading ? renderSkeletons() : renderRows()}
-        </table>
+        {!loading && rows.length === 0 ? (
+          <div className="w-full px-4 py-10 flex items-center justify-center">
+            <EmptyWorkbench
+              title={emptyTitle}
+              description={emptyDescription}
+              codeExample={emptyCodeExample}
+              actionLabel={emptyActionLabel}
+              onActionClick={onEmptyActionClick}
+            />
+          </div>
+        ) : (
+          <table className="w-full border-collapse text-left table-fixed">
+            {renderHeader()}
+            {loading ? renderSkeletons() : renderRows()}
+          </table>
+        )}
       </div>
     </div>
   );

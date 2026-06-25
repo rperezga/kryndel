@@ -23,6 +23,10 @@ Point at a contract → see its decoded calls, emitted events and triggered tran
 - **Simulation (optional):** wraps `ripple/craft`. **Do not reimplement craft.**
 - **Tests:** `vitest`. **CI:** GitHub Actions (`pnpm lint && pnpm test`). **License:** Apache-2.0.
 
+## Git conventions — MANDATORY
+
+- **ALL git commit messages MUST be written in English. No exceptions, ever.** This applies to every commit by anyone — Roger, Claude, or any executor instance. Use conventional-commit style (`feat:`, `fix:`, `chore:`, `docs:`, `refactor:`) with a concise English description. Spanish (or any non-English) commit messages are not allowed and must be rewritten before pushing.
+
 ## Commands
 
 ```bash
