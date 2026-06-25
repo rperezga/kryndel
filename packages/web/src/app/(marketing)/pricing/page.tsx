@@ -10,7 +10,7 @@ import { Button } from '@/components/ds/Button';
 export const metadata: Metadata = {
   title: 'Pricing',
   description:
-    'Kryndel pricing: Free plan forever, Pro at $19/month. No card required to start.',
+    'Kryndel pricing: Free plan forever, Pro at $19.99/month. No card required to start.',
   openGraph: {
     title: 'Kryndel Pricing — Free & Pro plans',
     description:
@@ -140,7 +140,7 @@ export default async function PricingPage() {
               <div className="mb-8">
                 <span className="font-ds-mono text-[10px] uppercase font-bold tracking-widest text-ds-green block mb-2">PRO</span>
                 <div className="flex items-baseline gap-1">
-                  <span className="font-ds-mono text-3xl font-bold text-ds-text">$19</span>
+                  <span className="font-ds-mono text-3xl font-bold text-ds-text">$19.99</span>
                   <span className="font-ds-mono text-xs text-ds-text-3">/mo</span>
                 </div>
                 <p className="text-xs text-ds-text-2 mt-4 leading-relaxed">Perfect for serious dapp developers.</p>

@@ -255,7 +255,7 @@ export default function LandingPage() {
           <h2 id="pricing-heading" className="mkt-h2">Start free. Upgrade when you scale.</h2>
           <p className="mkt-lead">No card to start. Cancel anytime.</p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-[18px] max-w-[760px] list-none p-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-[18px] max-w-[760px] mx-auto w-full list-none p-0">
             {/* Free tier */}
             <article className="bg-ds-panel border border-solid border-ds-border rounded-[16px] p-7 flex flex-col" aria-label="Free plan">
               <p className="font-ds-mono text-ds-text-2 text-[13px] mb-1.5">Free</p>
@@ -288,7 +288,7 @@ export default function LandingPage() {
               </div>
               <p className="font-ds-mono text-ds-text-2 text-[13px] mb-1.5">Pro</p>
               <p className="text-[38px] font-extrabold text-ds-text mb-4">
-                $19<span className="text-base text-ds-text-3 font-normal"> / month</span>
+                $19.99<span className="text-base text-ds-text-3 font-normal"> / month</span>
               </p>
               <ul className="list-none m-0 mb-6 p-0 flex-1 flex flex-col gap-1.5" aria-label="Pro plan features">
                 <li className="py-1.5 text-ds-text-2 text-sm flex gap-2.25 items-center border-b border-solid border-[rgba(255,255,255,0.03)] last:border-b-0">
