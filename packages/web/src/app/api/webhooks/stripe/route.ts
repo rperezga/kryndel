@@ -33,6 +33,9 @@ import { getDb } from '@/lib/db';
 import type Stripe from 'stripe';
 
 export const dynamic = 'force-dynamic';
+// Stripe signature verification needs the Node runtime + unmodified raw body.
+// Explicit (App Router routes already default to Node, but this prevents accidents).
+export const runtime = 'nodejs';
 
 /** Stripe will retry on 5xx; we use 400 only for verification failures. */
 export async function POST(req: NextRequest) {
