@@ -1,6 +1,6 @@
 # Kryndel — Limitations (honest)
 
-This document describes what Kryndel does **not** do in v0.1.0 and why. No spin.
+This document describes what Kryndel does **not** do today, and why. No spin. (Live product: [kryndel.dev](https://kryndel.dev).)
 
 ## EVM Sidechain (XRPL EVM, chain ID 1440002)
 
@@ -14,9 +14,9 @@ This document describes what Kryndel does **not** do in v0.1.0 and why. No spin.
 
 **RPC error backoff.** The EVM watcher uses exponential backoff on consecutive RPC failures: starting at 4 s, doubling each time up to a ceiling of 60 s, then resetting to 4 s on the next successful poll. This prevents hammering a degraded endpoint but means alert latency can temporarily grow to 60 s during RPC instability.
 
-**Alerts are in-process.** Alert rules live in MongoDB and are evaluated in the same process as the watcher. There is no persistence of in-flight events across restarts (Phase 2 target: M4 — persistent queue).
+**Alerts: hosted vs self-host.** In the **hosted** service (kryndel.dev) a dedicated 24/7 worker evaluates rules and dispatches alerts. In the **self-host CLI**, rules live in MongoDB and are evaluated in the same process as the watcher, with no persistence of in-flight events across restarts.
 
-**No REST API.** The indexer writes to MongoDB; reading requires either the CLI or direct database access. A REST API is scheduled for Phase 2 (M2).
+**REST API.** A public **REST API v1 + signed webhooks + TypeScript SDK** are live on the hosted product (Pro). When self-hosting the CLI, the indexer writes to MongoDB and you read via the CLI or directly from the database.
 
 **Decimals not assumed.** Token values are displayed as raw integers with a note to divide by `10^decimals`. The `decimals()` ABI call is not made automatically.
 
@@ -32,9 +32,9 @@ This document describes what Kryndel does **not** do in v0.1.0 and why. No spin.
 
 **No own contract deployed on AlphaNet.** Deploying a native WASM contract requires the `craft-toolkit-ts` toolchain and a funded AlphaNet account. This is deferred until AlphaNet is stable.
 
-## Web explorer
+## Web app & explorer
 
-Available in v0.1.1. The `kryndel web` command launches the Next.js explorer (requires `MONGODB_URI` in `.env`). Known limitation: on Windows, the command required `shell: true` in the spawn call — fixed in commit `e4cf74a`. The Next.js package (`packages/web`) is functional locally; public deployment (Vercel) is deferred (milestone C1).
+Live at **[kryndel.dev](https://kryndel.dev)** (Next.js, `packages/web`): public explorer (search/decode any contract, tx, event or selector) plus an authenticated dashboard (contracts, events, alerts, webhooks, API keys, billing). Self-hosting the web app requires `MONGODB_URI` and the app env vars in `.env`.
 
 ## General
 
@@ -42,6 +42,6 @@ Available in v0.1.1. The `kryndel web` command launches the Next.js explorer (re
 
 **MongoDB M0 limits.** The free Atlas tier (M0) has storage and connection limits. Suitable for demo and development; not for production indexing of high-volume contracts.
 
-**No authentication.** The CLI reads `.env` directly. There is no multi-user auth or role-based access.
+**Authentication.** The self-host **CLI** reads `.env` directly (no auth). The **hosted app** uses magic-link sign-in (NextAuth) with per-user API keys; there is no organization/role-based access control yet.
 
-**Alert channels.** Telegram and generic webhooks are supported. Discord support exists but uses the same webhook format. Slack and PagerDuty are not implemented.
+**Alert channels.** **Telegram** and **signed webhooks** are live today. **SMS, email and push are coming soon** (demand-driven). Slack and PagerDuty are not implemented.
