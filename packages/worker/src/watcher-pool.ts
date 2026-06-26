@@ -43,6 +43,62 @@ function decodeEvmActivity(
   }
 }
 
+/**
+ * F1b: Persist a decoded event to the `events` collection.
+ *
+ * Until now the live 24/7 worker decoded events only to dispatch alerts and
+ * webhooks — it never wrote them, so the dashboard / explorer Event Stream was
+ * fed only by seed.mjs (fabricated, name = raw topic0 hash) and manual
+ * watch-seed runs. This writes the DECODED event (human name + args) so the
+ * Event Stream reflects real live activity.
+ *
+ * Dedup mirrors the core MongoIndexer unique index
+ * {contract, txHash, name, logIndex}. Never throws — a persistence failure must
+ * not crash the watcher pool.
+ */
+async function persistEvent(
+  activity: ContractActivity,
+  contract: WContract,
+): Promise<void> {
+  if (activity.kind !== 'event') return;
+  try {
+    const db  = await getDb();
+    const log = (activity.raw ?? {}) as {
+      logIndex?: number; blockNumber?: bigint | number; transactionHash?: string;
+    };
+    const address  = contract.address.toLowerCase();
+    const txHash   = activity.txHash ?? log.transactionHash ?? undefined;
+    const logIndex = typeof log.logIndex === 'number' ? log.logIndex : null;
+    const name     = activity.name ?? 'unknown';
+
+    const doc = {
+      contract:        address,
+      contractAddress: address,
+      name,
+      args:            activity.args ?? {},
+      txHash,
+      logIndex,
+      ledgerOrBlock:   log.blockNumber != null ? Number(log.blockNumber) : undefined,
+      indexedAt:       new Date(),
+    };
+
+    if (txHash) {
+      await db.collection('events').updateOne(
+        { contract: address, txHash, name, logIndex },
+        { $setOnInsert: doc },
+        { upsert: true },
+      );
+    } else {
+      await db.collection('events').insertOne(doc);
+    }
+  } catch (e) {
+    console.error(
+      `[pool] persistEvent error for ${contract.surface}:${contract.address.slice(0, 8)}…:`,
+      e,
+    );
+  }
+}
+
 export type ActivityHandler = (
   activity:  ContractActivity,
   contract:  WContract,
@@ -109,9 +165,14 @@ export class WatcherPool {
           console.error(`[pool] dispatch error for ${key}:`, e),
         );
 
-        // 2. Deliver to outbound webhook endpoints (PB-core)
+        // 2. Persist the DECODED event so the dashboard / explorer Event Stream
+        //    reflects live worker activity (previously only seed / watch-seed).
+        await persistEvent(decoded, contract);
+
+        // 3. Deliver to outbound webhook endpoints (PB-core) with the DECODED
+        //    activity so eventName filtering + payload use the human name.
         getDb().then((db) =>
-          deliverWebhooks(db, contract.address, activity, contract.userId).catch((e) =>
+          deliverWebhooks(db, contract.address, decoded, contract.userId).catch((e) =>
             console.error(`[pool] webhook delivery error for ${key}:`, e),
           ),
         ).catch((e) => console.error(`[pool] getDb error:`, e));

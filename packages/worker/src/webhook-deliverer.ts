@@ -52,6 +52,17 @@ export async function deliverWebhooks(
   const normalizedAddress = contractAddress.toLowerCase();
   const eventName = activity.kind === 'event' ? (activity.name ?? 'unknown') : (activity.txType ?? 'unknown');
 
+  // JSON-/Mongo-safe view of the activity for the payload: drop the raw provider
+  // log (verbose, and may contain bigints that break JSON.stringify / Mongo insert)
+  // and keep the decoded, serializable fields.
+  const safeData: Record<string, unknown> = {
+    kind:     activity.kind,
+    event:    eventName,
+    contract: normalizedAddress,
+    txHash:   activity.txHash ?? null,
+    ...(activity.kind === 'event' ? { args: activity.args ?? {} } : { txType: activity.txType }),
+  };
+
   // Find matching active endpoints for this user
   const endpoints = await db.collection('webhook_endpoints').find({
     userId,
@@ -88,7 +99,7 @@ export async function deliverWebhooks(
       contract:    normalizedAddress,
       timestamp:   Date.now(),
       deliveryId,
-      data:        activity,
+      data:        safeData,
     };
     const payloadStr = JSON.stringify(payloadObj);
     const { signature, timestamp } = signDelivery(payloadStr, secret);
