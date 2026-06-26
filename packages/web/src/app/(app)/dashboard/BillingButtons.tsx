@@ -36,7 +36,7 @@ export default function BillingButtons({ plan }: Props) {
           disabled={pending !== null}
           style={{ padding: '0.5rem 1rem', background: 'var(--accent)', color: '#0f172a', border: 'none', borderRadius: 4, fontWeight: 700, fontSize: '0.875rem', cursor: pending ? 'wait' : 'pointer' }}
         >
-          {pending === 'checkout' ? 'Loading…' : 'Upgrade to Pro · $19/mo'}
+          {pending === 'checkout' ? 'Loading…' : 'Upgrade to Pro · $19.99/mo'}
         </button>
         {error && <span style={{ fontSize: '0.75rem', color: '#fca5a5' }}>{error}</span>}
       </div>

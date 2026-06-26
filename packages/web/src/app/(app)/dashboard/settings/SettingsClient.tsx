@@ -166,7 +166,7 @@ function ProfileTab({ email, plan, createdAt }: { email: string; plan: 'free' | 
               href="/pricing"
               className="text-ds-green font-ds-mono text-[10px] no-underline hover:underline"
             >
-              Upgrade to Pro · $19/mo →
+              Upgrade to Pro · $19.99/mo →
             </a>
           )}
         </FieldRow>
@@ -220,7 +220,7 @@ function ApiKeysTab({ plan, apiKeys }: { plan: 'free' | 'pro'; apiKeys: Record<s
               href="/pricing"
               className="border border-solid border-ds-amber text-ds-amber font-ds-mono text-[10px] px-4 py-2 hover:bg-ds-amber/10 rounded no-underline transition-colors font-bold uppercase shrink-0"
             >
-              Upgrade · $19/mo
+              Upgrade · $19.99/mo
             </a>
           </div>
         )}
@@ -348,7 +348,7 @@ function WebhooksTab({ plan, webhookEndpoints }: { plan: 'free' | 'pro'; webhook
               href="/pricing"
               className="border border-solid border-ds-amber text-ds-amber font-ds-mono text-[10px] px-4 py-2 hover:bg-ds-amber/10 rounded no-underline transition-colors font-bold uppercase shrink-0"
             >
-              Upgrade · $19/mo
+              Upgrade · $19.99/mo
             </a>
           </div>
         ) : endpoints.length === 0 ? (
@@ -500,7 +500,7 @@ function BillingTab({ plan, hasStripe }: { plan: 'free' | 'pro'; hasStripe: bool
         <FieldRow label="Current plan">
           <PlanBadge plan={plan} />
           <span className="font-ds-mono text-xs text-ds-text-2">
-            {plan === 'pro' ? '$19 / month' : '$0 / month'}
+            {plan === 'pro' ? '$19.99 / month' : '$0 / month'}
           </span>
         </FieldRow>
         <FieldRow label="Features">
@@ -524,7 +524,7 @@ function BillingTab({ plan, hasStripe }: { plan: 'free' | 'pro'; hasStripe: bool
               disabled={pending !== null}
               className="px-5 py-2.5 bg-ds-green text-ds-shell font-ds-mono text-xs font-bold rounded hover:bg-ds-green/90 disabled:opacity-50 cursor-pointer border-0 transition-colors outline-none focus-visible:ring-1 focus-visible:ring-ds-green"
             >
-              {pending === 'checkout' ? 'Loading…' : 'Upgrade to Pro · $19/mo'}
+              {pending === 'checkout' ? 'Loading…' : 'Upgrade to Pro · $19.99/mo'}
             </button>
           ) : (
             <button
@@ -563,7 +563,7 @@ function BillingTab({ plan, hasStripe }: { plan: 'free' | 'pro'; hasStripe: bool
           <div className={`p-4 border border-solid rounded-lg space-y-3 ${plan === 'pro' ? 'border-ds-green/40 bg-ds-green/5' : 'border-ds-border'}`}>
             <div className="flex items-center justify-between">
               <span className="font-ds-mono text-sm font-bold text-ds-text">Pro</span>
-              <span className="font-ds-mono text-lg font-bold text-ds-green">$19<span className="text-[10px] text-ds-text-3 font-normal">/mo</span></span>
+              <span className="font-ds-mono text-lg font-bold text-ds-green">$19.99<span className="text-[10px] text-ds-text-3 font-normal">/mo</span></span>
             </div>
             <ul className="font-ds-mono text-[10px] text-ds-text-2 space-y-1.5 m-0 p-0 list-none">
               <li>✓ 20 contracts</li>

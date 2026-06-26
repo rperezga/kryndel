@@ -2,7 +2,7 @@
  * POST /api/billing/checkout
  *
  * Creates a Stripe Checkout Session for the "Kryndel Pro" subscription
- * ($19/mo). Returns { url } — the client redirects to that URL.
+ * ($19.99/mo). Returns { url } — the client redirects to that URL.
  *
  * Security:
  *   • requireUser() — anonymous requests rejected.

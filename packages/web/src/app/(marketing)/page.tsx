@@ -281,7 +281,7 @@ export default function LandingPage() {
               </Button>
             </article>
 
-            {/* Pro tier ($19) */}
+            {/* Pro tier ($19.99) */}
             <article className="bg-ds-panel border border-solid border-ds-green shadow-[0_0_30px_rgba(43,217,111,0.12)] rounded-[16px] p-7 flex flex-col relative" aria-label="Pro plan">
               <div className="absolute -top-[11px] right-[22px] bg-ds-green text-[#04140a] text-[11px] font-bold px-[11px] py-[3px] rounded-full font-ds-mono select-none" aria-label="Most popular">
                 Most popular
