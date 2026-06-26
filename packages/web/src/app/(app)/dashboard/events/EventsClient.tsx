@@ -10,6 +10,7 @@ import {
   EmptyWorkbench,
   Button
 } from '@/components/ds';
+import { resolveEventName } from '@/lib/event-display';
 
 interface MappedContract {
   _id: string;
@@ -33,13 +34,16 @@ function formatDbEvent(e: any): StreamEvent {
   const timeStr = date.toTimeString().split(' ')[0];
   const timestamp = isToday ? timeStr : `${date.toLocaleDateString()} ${timeStr}`;
 
+  // Resolve raw topic0 hashes (legacy/undecoded rows) to a readable name.
+  const evName = resolveEventName(e.name);
+
   let description = '';
-  if (e.name === 'Transfer' && e.args && (e.args.from || e.args.to)) {
+  if (evName === 'Transfer' && e.args && (e.args.from || e.args.to)) {
     description = `Transfer of ${e.args.value || e.args.amount || 'units'} from ${String(e.args.from).slice(0, 8)}… to ${String(e.args.to).slice(0, 8)}…`;
-  } else if (e.name === 'Approval' && e.args) {
+  } else if (evName === 'Approval' && e.args) {
     description = `Approved spender ${String(e.args.spender).slice(0, 8)}… for ${e.args.value || e.args.amount || 'units'}`;
   } else if (e.args && Object.keys(e.args).length > 0) {
-    description = `${e.name} with args: ${Object.entries(e.args)
+    description = `${evName} with args: ${Object.entries(e.args)
       .slice(0, 3)
       .map(([k, v]) => `${k}=${String(v).slice(0, 15)}`)
       .join(', ')}`;
@@ -58,7 +62,7 @@ function formatDbEvent(e: any): StreamEvent {
   return {
     id: e._id?.toString() || Math.random().toString(),
     timestamp,
-    type: String(e.name || 'EVENT').toUpperCase(),
+    type: evName.toUpperCase(),
     description,
     address: e.contractAddress || e.contract,
     hash: e.txHash,

@@ -66,6 +66,36 @@ export async function deleteContract(address: string): Promise<ActionResponse> {
 }
 
 /**
+ * Rename a contract's label (the `name` field).
+ */
+export async function renameContract(address: string, name: string): Promise<ActionResponse> {
+  let user;
+  try {
+    user = await requireUser();
+  } catch {
+    return { error: 'Unauthorized' };
+  }
+
+  const cleanName = name.trim().slice(0, 80);
+  if (!cleanName) {
+    return { error: 'Label cannot be empty.' };
+  }
+
+  const db = await getDb();
+  const res = await db.collection('contracts').updateOne(
+    { userId: user._id, address: address.toLowerCase() },
+    { $set: { name: cleanName, updatedAt: new Date() } },
+  );
+
+  if (res.matchedCount === 0) {
+    return { error: 'Contract not found.' };
+  }
+
+  revalidatePath('/dashboard/contracts');
+  return { success: 'Label updated.' };
+}
+
+/**
  * Watch / Add a new contract.
  */
 export async function addContractAction(

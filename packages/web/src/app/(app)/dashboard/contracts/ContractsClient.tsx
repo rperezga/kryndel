@@ -10,6 +10,7 @@ import {
   toggleContractActive,
   deleteContract,
   addContractAction,
+  renameContract,
 } from './actions';
 import AbiUploadModal from '../AbiUploadModal';
 
@@ -77,6 +78,10 @@ export function ContractsClient({
   const [filterAbi, setFilterAbi] = useState<'all' | 'verified' | 'unverified'>('all');
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  // Inline label editing
+  const [editingAddr, setEditingAddr] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
 
   const searchParams = useSearchParams();
   useEffect(() => {
@@ -171,6 +176,32 @@ export function ContractsClient({
     }
   };
 
+  // Inline rename handlers
+  const startRename = (address: string, currentName: string) => {
+    setEditingAddr(address);
+    setEditValue(currentName);
+  };
+
+  const cancelRename = () => {
+    setEditingAddr(null);
+    setEditValue('');
+  };
+
+  const commitRename = async (address: string) => {
+    const next = editValue.trim();
+    const current = data.find((c) => c.address === address)?.name ?? '';
+    cancelRename();
+    if (!next || next === current) return;
+
+    const backup = [...data];
+    setData((prev) => prev.map((c) => (c.address === address ? { ...c, name: next } : c)));
+    const res = await renameContract(address, next);
+    if (res.error) {
+      alert(`Error renaming: ${res.error}`);
+      setData(backup);
+    }
+  };
+
   // Add contract submit handler
   const handleAddContract = (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,11 +232,30 @@ export function ContractsClient({
     {
       accessorKey: 'name',
       header: () => <span className="font-label-caps text-label-caps">Contract Label</span>,
-      cell: ({ row }) => (
-        <span className="font-headline-md text-headline-md text-ds-green font-bold">
-          {row.original.name}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const c = row.original;
+        if (editingAddr === c.address) {
+          return (
+            <input
+              autoFocus
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void commitRename(c.address);
+                if (e.key === 'Escape') cancelRename();
+              }}
+              onBlur={() => void commitRename(c.address)}
+              maxLength={80}
+              className="w-full bg-ds-shell border border-solid border-ds-green rounded px-2 py-1 font-ds-mono text-xs text-ds-text outline-none"
+            />
+          );
+        }
+        return (
+          <span className="font-headline-md text-headline-md text-ds-green font-bold">
+            {c.name}
+          </span>
+        );
+      },
       size: 180,
     },
     {
@@ -292,6 +342,13 @@ export function ContractsClient({
             >
               <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>notifications_active</span>
             </a>
+            <button
+              onClick={() => startRename(c.address, c.name)}
+              className="p-1 hover:text-ds-green text-ds-text-3 bg-transparent border-0 cursor-pointer transition-colors flex items-center outline-none"
+              title="Rename label"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>edit</span>
+            </button>
             <AbiUploadModal address={c.address} hasAbi={!!c.abi} />
             <button
               onClick={() => handleToggleActive(c.address, !c.active)}
@@ -416,7 +473,22 @@ export function ContractsClient({
                 >
                   {/* Header: Name/Label & Status */}
                   <div className="flex justify-between items-start gap-2">
-                    <div className="font-bold text-sm text-ds-text">{c.name}</div>
+                    {editingAddr === c.address ? (
+                      <input
+                        autoFocus
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') void commitRename(c.address);
+                          if (e.key === 'Escape') cancelRename();
+                        }}
+                        onBlur={() => void commitRename(c.address)}
+                        maxLength={80}
+                        className="flex-1 bg-ds-shell border border-solid border-ds-green rounded px-2 py-1 font-ds-mono text-xs text-ds-text outline-none"
+                      />
+                    ) : (
+                      <div className="font-bold text-sm text-ds-text">{c.name}</div>
+                    )}
                     <StatusChip
                       status={c.active ? 'ok' : 'neutral'}
                       label={c.active ? 'ACTIVE' : 'PAUSED'}
@@ -468,6 +540,12 @@ export function ContractsClient({
                     >
                       Rules
                     </a>
+                    <button
+                      onClick={() => startRename(c.address, c.name)}
+                      className="px-3 py-1.5 text-xs text-ds-text-2 hover:text-ds-green border border-solid border-ds-border rounded bg-ds-panel-2/20 cursor-pointer outline-none"
+                    >
+                      Rename
+                    </button>
                     <AbiUploadModal address={c.address} hasAbi={!!c.abi} />
                     <button
                       onClick={() => handleToggleActive(c.address, !c.active)}
