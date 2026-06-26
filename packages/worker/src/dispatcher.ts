@@ -10,8 +10,8 @@
  * - escapeMarkdownV2() from @kryndel/core used for Telegram messages with
  *   parse_mode 'MarkdownV2' — covers all v2 special chars (§M3).
  */
-import type { ContractActivity } from '@kryndel/core';
-import { escapeMarkdownV2, assertSafePublicUrl } from '@kryndel/core';
+import type { ContractActivity } from '@kryndel/core/full';
+import { escapeMarkdownV2, assertSafePublicUrl } from '@kryndel/core/full';
 import type { WAlertRule } from './types.js';
 import { getDb } from './db.js';
 

@@ -8,8 +8,8 @@
  * PB-core: after dispatching alerts, also triggers deliverWebhooks for
  * outbound signed delivery to user-registered webhook endpoints.
  */
-import { createEvmWatcher, createNativeWatcher, createEvmDecoder } from '@kryndel/core';
-import type { Watcher, ContractActivity } from '@kryndel/core';
+import { createEvmWatcher, createNativeWatcher, createEvmDecoder } from '@kryndel/core/full';
+import type { Watcher, ContractActivity } from '@kryndel/core/full';
 import type { WContract, WAlertRule } from './types.js';
 import { dispatch }          from './dispatcher.js';
 import { deliverWebhooks }   from './webhook-deliverer.js';

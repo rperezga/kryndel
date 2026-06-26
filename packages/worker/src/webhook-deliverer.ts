@@ -19,7 +19,7 @@
  */
 import { createHmac }      from 'node:crypto';
 import { ObjectId, type Db } from 'mongodb';
-import type { ContractActivity } from '@kryndel/core';
+import type { ContractActivity } from '@kryndel/core/full';
 
 // ── Retry backoff ─────────────────────────────────────────────────────────────
 
