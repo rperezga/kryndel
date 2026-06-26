@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useState } from 'react';
 import { cn } from './cn';
+import { useAddressLabel } from './AddressLabelProvider';
 
 export interface AddressPillProps extends React.HTMLAttributes<HTMLDivElement> {
   address: string;
@@ -24,6 +25,7 @@ export function AddressPill({
   ...props
 }: AddressPillProps) {
   const [copied, setCopied] = useState(false);
+  const label = useAddressLabel(address);
 
   // Simple middle truncation: e.g. 0xe4c3ee653d7861cf236b2bea4bdb2a261231ea67 -> 0xe4c3…1ea67
   const displayAddress = React.useMemo(() => {
@@ -61,18 +63,38 @@ export function AddressPill({
       )}
       {...props}
     >
-      {/* Dynamic Link or Span for truncated address */}
+      {/* Address — shows a human label (when known) + the truncated address */}
       {explorerUrl ? (
         <a
           href={explorerUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="hover:text-ds-green outline-none focus-visible:text-ds-green no-underline font-semibold tracking-tight cursor-pointer"
+          title={label ? address : undefined}
+          className="hover:text-ds-green outline-none focus-visible:text-ds-green no-underline tracking-tight cursor-pointer inline-flex items-center gap-1.5 min-w-0"
         >
-          {displayAddress}
+          {label ? (
+            <>
+              <span className="font-semibold text-ds-green truncate">{label}</span>
+              <span className="font-normal text-ds-text-3 shrink-0">{displayAddress}</span>
+            </>
+          ) : (
+            <span className="font-semibold">{displayAddress}</span>
+          )}
         </a>
       ) : (
-        <span className="font-semibold tracking-tight select-all">{displayAddress}</span>
+        <span
+          title={label ? address : undefined}
+          className="tracking-tight inline-flex items-center gap-1.5 min-w-0"
+        >
+          {label ? (
+            <>
+              <span className="font-semibold text-ds-green truncate">{label}</span>
+              <span className="font-normal text-ds-text-3 shrink-0 select-all">{displayAddress}</span>
+            </>
+          ) : (
+            <span className="font-semibold select-all">{displayAddress}</span>
+          )}
+        </span>
       )}
 
       {/* Copy Action Button */}

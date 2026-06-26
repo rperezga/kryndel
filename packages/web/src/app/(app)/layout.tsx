@@ -5,6 +5,9 @@ import { HeaderSearchTrigger } from '@/components/ds/HeaderSearchTrigger';
 import { CommandPalette } from '@/components/ds/CommandPalette';
 import { SideNavLink } from '@/components/ds/SideNavLink';
 import { MobileBottomNav } from '@/components/ds/MobileBottomNav';
+import { getDb } from '@/lib/db';
+import { buildLabelMap } from '@/lib/address-labels';
+import { AddressLabelProvider } from '@/components/ds/AddressLabelProvider';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser();
@@ -12,12 +15,27 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   let plan: 'free' | 'pro' = 'free';
   let email = '';
+  let addressLabels: Record<string, string> = {};
   if (user) {
     email = user.email;
     plan = user.plan === 'pro' ? 'pro' : 'free';
+    try {
+      const db = await getDb();
+      const [labelDocs, contractDocs] = await Promise.all([
+        db.collection('address_labels').find({ userId: user._id }).project({ address: 1, label: 1 }).toArray(),
+        db.collection('contracts').find({ userId: user._id }).project({ address: 1, name: 1 }).toArray(),
+      ]);
+      addressLabels = buildLabelMap(
+        contractDocs as unknown as Array<{ address?: unknown; name?: unknown }>,
+        labelDocs   as unknown as Array<{ address?: unknown; label?: unknown }>,
+      );
+    } catch {
+      /* labels are best-effort — never block the app shell */
+    }
   }
 
   return (
+    <AddressLabelProvider labels={addressLabels}>
     <div className="min-h-screen bg-ds-shell text-ds-text">
       {/* ── Top Navigation Bar ── */}
       <header className="fixed top-0 left-0 w-full h-[56px] bg-ds-panel border-0 border-b border-solid border-ds-border flex justify-between items-center px-6 z-50">
@@ -152,6 +170,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             >
               Settings
             </SideNavLink>
+            <SideNavLink
+              href="/dashboard/labels"
+              className="flex items-center gap-3 px-3 py-2 text-ds-text-2 hover:text-ds-green hover:bg-ds-panel-2 rounded transition-all font-ds-mono text-xs no-underline"
+            >
+              Address Labels
+            </SideNavLink>
             <a
               href="/dashboard/contracts?add=true"
               className="mx-3 mt-2 border border-solid border-ds-green text-ds-green bg-transparent font-ds-mono text-xs py-2 hover:bg-ds-green/10 text-center rounded transition-all no-underline"
@@ -189,5 +213,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {/* ── Command Palette dialog container ── */}
       <CommandPalette />
     </div>
+    </AddressLabelProvider>
   );
 }
