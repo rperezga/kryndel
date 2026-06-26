@@ -90,8 +90,8 @@ export async function deliverWebhooks(
 
   const deliveries = matching.map(async (ep) => {
     const endpointId = ep._id as ObjectId;
-    const secret     = (ep as { secret: string }).secret;
-    const url        = (ep as { url: string }).url;
+    const secret     = (ep as unknown as { secret: string }).secret;
+    const url        = (ep as unknown as { url: string }).url;
     const deliveryId = new ObjectId().toHexString();
 
     const payloadObj = {
@@ -172,7 +172,7 @@ export async function processRetries(db: Db): Promise<void> {
 
   const retries = pending.map(async (delivery) => {
     const attempt    = ((delivery as { attempt?: number }).attempt ?? 1) + 1;
-    const endpointId = (delivery as { endpointId: ObjectId }).endpointId;
+    const endpointId = (delivery as unknown as { endpointId: ObjectId }).endpointId;
 
     const endpoint = await db.collection('webhook_endpoints').findOne({ _id: endpointId, active: true });
     if (!endpoint) {
@@ -184,9 +184,9 @@ export async function processRetries(db: Db): Promise<void> {
       return;
     }
 
-    const secret  = (endpoint as { secret: string }).secret;
-    const url     = (endpoint as { url: string }).url;
-    const payload = (delivery as { payload: Record<string, unknown> }).payload;
+    const secret  = (endpoint as unknown as { secret: string }).secret;
+    const url     = (endpoint as unknown as { url: string }).url;
+    const payload = (delivery as unknown as { payload: Record<string, unknown> }).payload;
     const payloadStr = JSON.stringify(payload);
     const { signature, timestamp } = signDelivery(payloadStr, secret);
 
