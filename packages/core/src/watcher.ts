@@ -151,13 +151,23 @@ export function createEvmWatcher(opts: WatchOptions): Watcher {
       stopped = false;
       status('connecting', opts.endpoint);
 
-      // Smoke-check: confirmar que el RPC responde antes de empezar a escuchar.
-      try {
-        await client.getBlockNumber();
-        status('open');
-      } catch (e) {
-        status('error', `RPC no disponible: ${String((e as Error)?.message ?? e)}`);
-        return;
+      // Smoke-check with retry + backoff. A transient RPC failure at startup
+      // (e.g. a 403 from an edge-blocked endpoint, or a timeout) must NOT kill
+      // the watcher — otherwise a single hiccup takes it down until the whole
+      // pool is restarted (which only happens on redeploy). Keep retrying until
+      // the RPC responds or the watcher is stopped.
+      let smokeBackoff = POLL_BASE;
+      for (;;) {
+        if (stopped) return;
+        try {
+          await client.getBlockNumber();
+          status('open');
+          break;
+        } catch (e) {
+          status('error', `RPC unavailable, retrying in ${Math.round(smokeBackoff / 1000)}s: ${String((e as Error)?.message ?? e)}`);
+          await new Promise<void>((resolve) => setTimeout(resolve, smokeBackoff));
+          smokeBackoff = Math.min(smokeBackoff * 2, POLL_MAX);
+        }
       }
 
       const address =
