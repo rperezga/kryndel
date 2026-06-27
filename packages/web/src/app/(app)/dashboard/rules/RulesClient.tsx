@@ -14,6 +14,7 @@ import {
   sendTestAlertAction,
   type ActionResponse,
 } from './actions';
+import { ALERT_TEMPLATES, getAlertTemplate, type AlertTemplate } from '@/lib/alert-templates';
 
 interface RuleData {
   _id: string;
@@ -149,12 +150,44 @@ export function RulesClient({
   const [testResult, setTestResult] = useState<ActionResponse | null>(null);
   const [isTesting, startTestTransition] = useTransition();
 
+  // Apply a one-click template: pre-fill the builder and jump to the step that
+  // still needs input (threshold for large-transfer, else destinations).
+  const applyTemplate = (t: AlertTemplate, contractAddr?: string) => {
+    setTriggerType('event');
+    if (contractAddr) setSelectedContractAddress(contractAddr);
+    // Use the custom-event input for every template so the value can't be reset
+    // by the "event not in knownEvents" effect (matters for '*' = any event).
+    setIsCustomEvent(true);
+    setCustomEventInput(t.eventName);
+    setEnableFilter(t.enableFilter);
+    setFilterArgName(t.filterArgName ?? '');
+    setFilterOp(t.filterOp ?? '>');
+    setFilterValue('');
+    setAlertName(t.defaultName);
+    setAddError(null);
+    setIsAddSheetOpen(true);
+    setStep(t.requiresThreshold ? 3 : 4);
+  };
+
   // Open drawer if 'add=true' search param is present
   const searchParams = useSearchParams();
   useEffect(() => {
     if (searchParams.get('add') === 'true') {
       setIsAddSheetOpen(true);
     }
+  }, [searchParams]);
+
+  // Deep-link from the contracts "Watch" menu:
+  // /dashboard/rules?template=<id>[&contract=<addr>] → open the builder pre-filled.
+  useEffect(() => {
+    const t = getAlertTemplate(searchParams.get('template'));
+    if (!t) return;
+    const c = searchParams.get('contract');
+    const match = c
+      ? contracts.find((x) => x.address.toLowerCase() === c.toLowerCase())
+      : undefined;
+    applyTemplate(t, match?.address);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   // Set default event name when contract selection changes
@@ -457,6 +490,29 @@ export function RulesClient({
           </Button>
         </div>
       </header>
+
+      {/* Quick templates — one-click watch presets that pre-fill the builder */}
+      {contracts.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-ds-mono text-[10px] text-ds-text-3 uppercase font-bold mr-1 select-none">
+            Quick templates
+          </span>
+          {ALERT_TEMPLATES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => applyTemplate(t)}
+              title={t.blurb}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-solid border-ds-border hover:border-ds-green rounded bg-ds-panel text-ds-text-2 hover:text-ds-green font-ds-mono text-[11px] uppercase font-bold cursor-pointer outline-none transition-colors select-none"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>
+                {t.icon}
+              </span>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Main Grid table / list */}
       {rules.length === 0 ? (

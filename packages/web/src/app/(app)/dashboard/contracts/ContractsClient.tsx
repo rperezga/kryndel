@@ -14,6 +14,7 @@ import {
   autoFetchAbi,
 } from './actions';
 import AbiUploadModal from '../AbiUploadModal';
+import { ALERT_TEMPLATES } from '@/lib/alert-templates';
 
 interface ContractData {
   _id: string;
@@ -86,6 +87,9 @@ export function ContractsClient({
 
   // ABI auto-fetch (address currently being fetched)
   const [abiFetching, setAbiFetching] = useState<string | null>(null);
+
+  // "Watch with template" dropdown (fixed-positioned; tracks open row + anchor).
+  const [watchMenu, setWatchMenu] = useState<{ addr: string; x: number; y: number } | null>(null);
 
   const searchParams = useSearchParams();
   useEffect(() => {
@@ -360,6 +364,16 @@ export function ContractsClient({
               <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>notifications_active</span>
             </a>
             <button
+              onClick={(e) => {
+                const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                setWatchMenu((m) => (m?.addr === c.address ? null : { addr: c.address, x: r.right, y: r.bottom }));
+              }}
+              className="p-1 hover:text-ds-green text-ds-text-3 bg-transparent border-0 cursor-pointer transition-colors flex items-center outline-none"
+              title="Watch with a template (1-click alert)"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>add_alert</span>
+            </button>
+            <button
               onClick={() => startRename(c.address, c.name)}
               className="p-1 hover:text-ds-green text-ds-text-3 bg-transparent border-0 cursor-pointer transition-colors flex items-center outline-none"
               title="Rename label"
@@ -570,6 +584,15 @@ export function ContractsClient({
                       Rules
                     </a>
                     <button
+                      onClick={(e) => {
+                        const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                        setWatchMenu((m) => (m?.addr === c.address ? null : { addr: c.address, x: r.right, y: r.bottom }));
+                      }}
+                      className="px-3 py-1.5 text-xs text-ds-text-2 hover:text-ds-green border border-solid border-ds-border rounded bg-ds-panel-2/20 cursor-pointer outline-none"
+                    >
+                      Watch
+                    </button>
+                    <button
                       onClick={() => startRename(c.address, c.name)}
                       className="px-3 py-1.5 text-xs text-ds-text-2 hover:text-ds-green border border-solid border-ds-border rounded bg-ds-panel-2/20 cursor-pointer outline-none"
                     >
@@ -601,6 +624,38 @@ export function ContractsClient({
                 </div>
               ))
             )}
+          </div>
+        </>
+      )}
+
+      {/* Watch-with-template dropdown — fixed-positioned to avoid table clipping */}
+      {watchMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setWatchMenu(null)} />
+          <div
+            className="fixed z-50 bg-ds-panel border border-solid border-ds-border rounded-lg shadow-xl py-1 min-w-[210px]"
+            style={{
+              top: watchMenu.y + 6,
+              left: Math.min(
+                Math.max(8, watchMenu.x - 210),
+                (typeof window !== 'undefined' ? window.innerWidth : 1280) - 220
+              ),
+            }}
+          >
+            <div className="px-3 py-1.5 text-[9px] font-ds-mono uppercase text-ds-text-3 font-bold border-0 border-b border-solid border-ds-border/50 select-none">
+              Watch with template
+            </div>
+            {ALERT_TEMPLATES.map((t) => (
+              <a
+                key={t.id}
+                href={`/dashboard/rules?contract=${encodeURIComponent(watchMenu.addr)}&template=${t.id}`}
+                className="flex items-center gap-2 px-3 py-2 text-xs font-ds-mono text-ds-text-2 hover:bg-ds-green/10 hover:text-ds-green no-underline"
+                title={t.blurb}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>{t.icon}</span>
+                {t.label}
+              </a>
+            ))}
           </div>
         </>
       )}
