@@ -12,6 +12,9 @@ export interface AddressPillProps extends React.HTMLAttributes<HTMLDivElement> {
   isWatching?: boolean;
   onWatchToggle?: (address: string, nextState: boolean) => void;
   explorerUrl?: string;
+  /** Show the human label (when known) before the address. Off where the name
+   *  already appears elsewhere (e.g. the Contracts table label column). */
+  showLabel?: boolean;
 }
 
 export function AddressPill({
@@ -22,10 +25,12 @@ export function AddressPill({
   isWatching = false,
   onWatchToggle,
   explorerUrl,
+  showLabel = true,
   ...props
 }: AddressPillProps) {
   const [copied, setCopied] = useState(false);
-  const label = useAddressLabel(address);
+  const resolvedLabel = useAddressLabel(address);
+  const label = showLabel ? resolvedLabel : null;
 
   // Simple middle truncation: e.g. 0xe4c3ee653d7861cf236b2bea4bdb2a261231ea67 -> 0xe4c3…1ea67
   const displayAddress = React.useMemo(() => {

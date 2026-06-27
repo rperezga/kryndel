@@ -261,7 +261,7 @@ export function ContractsClient({
     {
       accessorKey: 'address',
       header: () => <span className="font-label-caps text-label-caps">Address</span>,
-      cell: ({ row }) => <AddressPill address={row.original.address} />,
+      cell: ({ row }) => <AddressPill address={row.original.address} showLabel={false} />,
       size: 160,
     },
     {
@@ -499,7 +499,7 @@ export function ContractsClient({
                   <div className="grid grid-cols-2 gap-y-2.5 gap-x-4 text-xs font-ds-mono text-ds-text-2 border-0 border-t border-b border-solid border-ds-border/30 py-3">
                     <div className="text-ds-text-3 font-bold uppercase text-[9px] tracking-wider select-none">Address</div>
                     <div className="text-right flex justify-end">
-                      <AddressPill address={c.address} />
+                      <AddressPill address={c.address} showLabel={false} />
                     </div>
 
                     <div className="text-ds-text-3 font-bold uppercase text-[9px] tracking-wider select-none">Surface</div>

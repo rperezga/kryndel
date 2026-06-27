@@ -110,5 +110,5 @@ export function LiveEventStream({ initialEvents }: LiveEventStreamProps) {
     };
   }, []);
 
-  return <EventStream events={events} maxHeight="360px" />;
+  return <EventStream events={events} maxHeight="360px" dense />;
 }

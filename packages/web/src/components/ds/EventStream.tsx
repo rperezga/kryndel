@@ -25,6 +25,8 @@ export interface StreamEvent {
 export interface EventStreamProps extends React.HTMLAttributes<HTMLDivElement> {
   events: StreamEvent[];
   maxHeight?: string;
+  /** Compact layout for narrow containers (e.g. the Overview side column). */
+  dense?: boolean;
 }
 
 // Compact magnitude for big uint values: 400000000000000000000 → 4e20
@@ -48,7 +50,7 @@ function PartyChip({ address }: { address?: string }) {
   if (!address) return null;
   return (
     <span
-      className="inline-flex items-center font-ds-mono text-[11px] max-w-[170px] truncate"
+      className="inline-flex items-center font-ds-mono text-[11px] max-w-[150px] truncate"
       title={address}
     >
       {label ? (
@@ -60,14 +62,73 @@ function PartyChip({ address }: { address?: string }) {
   );
 }
 
-/**
- * One event row as a fixed-column grid so every row's columns line up:
- *   [TYPE 120] [CONTRACT 210] [ from → to · value  (grows) ] [ tx · status · time ]
- * Stacks on mobile.
- */
-function EventCard({ event }: { event: StreamEvent }) {
+const typeBadgeCls =
+  'inline-block truncate align-middle font-ds-mono text-[10px] font-bold text-ds-green uppercase tracking-wide bg-ds-green/10 border border-solid border-ds-green/20 rounded px-1.5 py-0.5 select-none';
+
+/** Inline "from → to · value" group, shared by both layouts. */
+function Parties({ event }: { event: StreamEvent }) {
+  return (
+    <>
+      <span className="font-ds-mono text-[8px] uppercase tracking-widest text-ds-text-3 select-none shrink-0">
+        from
+      </span>
+      <PartyChip address={event.from} />
+      <span className="text-ds-text-3 shrink-0 px-0.5">→</span>
+      <span className="font-ds-mono text-[8px] uppercase tracking-widest text-ds-text-3 select-none shrink-0">
+        to
+      </span>
+      <PartyChip address={event.to} />
+      {event.value && (
+        <span className="font-ds-mono text-[11px] text-ds-text-3 ml-1.5 shrink-0" title={event.value}>
+          · {fmtValue(event.value)}
+        </span>
+      )}
+    </>
+  );
+}
+
+function EventCard({ event, dense }: { event: StreamEvent; dense?: boolean }) {
   const hasParties = !!(event.from && event.to);
 
+  // ── Compact: two flexible rows that fit a narrow container ──────────────────
+  if (dense) {
+    return (
+      <PhosphorPulse active={!!event.isNew}>
+        <div
+          className={cn(
+            'flex flex-col gap-1.5 bg-ds-shell border border-solid border-ds-border/60 rounded-md px-3 py-2.5 transition-colors duration-150 hover:bg-ds-panel-2/20',
+            event.isNew ? 'border-ds-green/40' : ''
+          )}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <span className={cn(typeBadgeCls, 'max-w-[120px]')} title={event.type}>
+              {event.type}
+            </span>
+            {event.address && <AddressPill address={event.address} />}
+            <span className="font-ds-mono text-[10px] text-ds-text-3 ml-auto shrink-0 pl-2 select-none">
+              {event.timestamp}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
+              {hasParties ? (
+                <Parties event={event} />
+              ) : (
+                event.description && (
+                  <p className="font-ds-sans text-xs text-ds-text-2 leading-relaxed truncate min-w-0">
+                    {event.description}
+                  </p>
+                )
+              )}
+            </div>
+            {event.hash && <TxPill hash={event.hash} status={event.status} />}
+          </div>
+        </div>
+      </PhosphorPulse>
+    );
+  }
+
+  // ── Table: fixed-column grid so rows line up (full-width events page) ───────
   return (
     <PhosphorPulse active={!!event.isNew}>
       <div
@@ -76,43 +137,19 @@ function EventCard({ event }: { event: StreamEvent }) {
           event.isNew ? 'border-ds-green/40' : ''
         )}
       >
-        {/* Col 1 — type */}
         <div className="min-w-0">
-          <span
-            className="inline-block max-w-full truncate align-middle font-ds-mono text-[10px] font-bold text-ds-green uppercase tracking-wide bg-ds-green/10 border border-solid border-ds-green/20 rounded px-1.5 py-0.5 select-none"
-            title={event.type}
-          >
+          <span className={cn(typeBadgeCls, 'max-w-full')} title={event.type}>
             {event.type}
           </span>
         </div>
 
-        {/* Col 2 — contract */}
         <div className="min-w-0 flex">
           {event.address && <AddressPill address={event.address} className="max-w-full" />}
         </div>
 
-        {/* Col 3 — from → to + value (grows), or description */}
         <div className="flex items-center gap-2 min-w-0">
           {hasParties ? (
-            <>
-              <span className="font-ds-mono text-[8px] uppercase tracking-widest text-ds-text-3 select-none shrink-0">
-                from
-              </span>
-              <PartyChip address={event.from} />
-              <span className="text-ds-text-3 shrink-0 px-0.5">→</span>
-              <span className="font-ds-mono text-[8px] uppercase tracking-widest text-ds-text-3 select-none shrink-0">
-                to
-              </span>
-              <PartyChip address={event.to} />
-              {event.value && (
-                <span
-                  className="font-ds-mono text-[11px] text-ds-text-3 ml-1.5 shrink-0"
-                  title={event.value}
-                >
-                  · {fmtValue(event.value)}
-                </span>
-              )}
-            </>
+            <Parties event={event} />
           ) : (
             event.description && (
               <p className="font-ds-sans text-xs text-ds-text-2 leading-relaxed truncate min-w-0">
@@ -122,7 +159,6 @@ function EventCard({ event }: { event: StreamEvent }) {
           )}
         </div>
 
-        {/* Col 4 — tx + status + timestamp */}
         <div className="flex items-center gap-3 justify-between md:justify-end shrink-0">
           {event.hash && <TxPill hash={event.hash} status={event.status} />}
           <span className="font-ds-mono text-[10px] text-ds-text-3 shrink-0 select-none min-w-[54px] text-right">
@@ -138,6 +174,7 @@ export function EventStream({
   className,
   events,
   maxHeight = '400px',
+  dense = false,
   ...props
 }: EventStreamProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -219,7 +256,7 @@ export function EventStream({
         )}
 
         {events.map((event) => (
-          <EventCard key={event.id} event={event} />
+          <EventCard key={event.id} event={event} dense={dense} />
         ))}
       </div>
 
