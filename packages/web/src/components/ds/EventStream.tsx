@@ -25,7 +25,7 @@ export interface StreamEvent {
 export interface EventStreamProps extends React.HTMLAttributes<HTMLDivElement> {
   events: StreamEvent[];
   maxHeight?: string;
-  /** Compact layout for narrow containers (e.g. the Overview side column). */
+  /** Force the compact layout everywhere (e.g. the Overview side column). */
   dense?: boolean;
 }
 
@@ -65,6 +65,9 @@ function PartyChip({ address }: { address?: string }) {
 const typeBadgeCls =
   'inline-block truncate align-middle font-ds-mono text-[10px] font-bold text-ds-green uppercase tracking-wide bg-ds-green/10 border border-solid border-ds-green/20 rounded px-1.5 py-0.5 select-none';
 
+const cardBase =
+  'bg-ds-shell border border-solid rounded-md transition-colors duration-150 hover:bg-ds-panel-2/20';
+
 /** Inline "from → to · value" group, shared by both layouts. */
 function Parties({ event }: { event: StreamEvent }) {
   return (
@@ -87,85 +90,80 @@ function Parties({ event }: { event: StreamEvent }) {
   );
 }
 
-function EventCard({ event, dense }: { event: StreamEvent; dense?: boolean }) {
+function Body({ event }: { event: StreamEvent }) {
   const hasParties = !!(event.from && event.to);
+  if (hasParties) return <Parties event={event} />;
+  return event.description ? (
+    <p className="font-ds-sans text-xs text-ds-text-2 leading-relaxed truncate min-w-0">
+      {event.description}
+    </p>
+  ) : null;
+}
 
-  // ── Compact: two flexible rows that fit a narrow container ──────────────────
-  if (dense) {
-    return (
-      <PhosphorPulse active={!!event.isNew}>
-        <div
-          className={cn(
-            'flex flex-col gap-1.5 bg-ds-shell border border-solid border-ds-border/60 rounded-md px-3 py-2.5 transition-colors duration-150 hover:bg-ds-panel-2/20',
-            event.isNew ? 'border-ds-green/40' : ''
-          )}
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <span className={cn(typeBadgeCls, 'max-w-[120px]')} title={event.type}>
-              {event.type}
-            </span>
-            {event.address && <AddressPill address={event.address} />}
-            <span className="font-ds-mono text-[10px] text-ds-text-3 ml-auto shrink-0 pl-2 select-none">
-              {event.timestamp}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
-              {hasParties ? (
-                <Parties event={event} />
-              ) : (
-                event.description && (
-                  <p className="font-ds-sans text-xs text-ds-text-2 leading-relaxed truncate min-w-0">
-                    {event.description}
-                  </p>
-                )
-              )}
-            </div>
-            {event.hash && <TxPill hash={event.hash} status={event.status} />}
-          </div>
+/** Compact two-row card — fits narrow containers + mobile. */
+function CompactCard({ event }: { event: StreamEvent }) {
+  return (
+    <div className={cn(cardBase, 'flex flex-col gap-1.5 px-3 py-2.5', event.isNew ? 'border-ds-green/40' : 'border-ds-border/60')}>
+      <div className="flex items-center gap-2 min-w-0">
+        <span className={cn(typeBadgeCls, 'max-w-[120px]')} title={event.type}>
+          {event.type}
+        </span>
+        {event.address && <AddressPill address={event.address} />}
+        <span className="font-ds-mono text-[10px] text-ds-text-3 ml-auto shrink-0 pl-2 select-none">
+          {event.timestamp}
+        </span>
+      </div>
+      <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
+          <Body event={event} />
         </div>
-      </PhosphorPulse>
-    );
-  }
+        {event.hash && <TxPill hash={event.hash} status={event.status} />}
+      </div>
+    </div>
+  );
+}
 
-  // ── Table: fixed-column grid so rows line up (full-width events page) ───────
+/** Fixed-column grid card — aligned table for the full-width events page (md+). */
+function TableCard({ event }: { event: StreamEvent }) {
+  return (
+    <div className={cn(cardBase, 'grid grid-cols-[120px_210px_minmax(0,1fr)_auto] items-center gap-x-4 px-3.5 py-2.5', event.isNew ? 'border-ds-green/40' : 'border-ds-border/60')}>
+      <div className="min-w-0">
+        <span className={cn(typeBadgeCls, 'max-w-full')} title={event.type}>
+          {event.type}
+        </span>
+      </div>
+      <div className="min-w-0 flex">
+        {event.address && <AddressPill address={event.address} className="max-w-full" />}
+      </div>
+      <div className="flex items-center gap-2 min-w-0">
+        <Body event={event} />
+      </div>
+      <div className="flex items-center gap-3 justify-end shrink-0">
+        {event.hash && <TxPill hash={event.hash} status={event.status} />}
+        <span className="font-ds-mono text-[10px] text-ds-text-3 shrink-0 select-none min-w-[54px] text-right">
+          {event.timestamp}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function EventCard({ event, dense }: { event: StreamEvent; dense?: boolean }) {
   return (
     <PhosphorPulse active={!!event.isNew}>
-      <div
-        className={cn(
-          'grid grid-cols-1 md:grid-cols-[120px_210px_minmax(0,1fr)_auto] md:items-center gap-x-4 gap-y-1.5 bg-ds-shell border border-solid border-ds-border/60 rounded-md px-3.5 py-2.5 transition-colors duration-150 hover:bg-ds-panel-2/20',
-          event.isNew ? 'border-ds-green/40' : ''
-        )}
-      >
-        <div className="min-w-0">
-          <span className={cn(typeBadgeCls, 'max-w-full')} title={event.type}>
-            {event.type}
-          </span>
-        </div>
-
-        <div className="min-w-0 flex">
-          {event.address && <AddressPill address={event.address} className="max-w-full" />}
-        </div>
-
-        <div className="flex items-center gap-2 min-w-0">
-          {hasParties ? (
-            <Parties event={event} />
-          ) : (
-            event.description && (
-              <p className="font-ds-sans text-xs text-ds-text-2 leading-relaxed truncate min-w-0">
-                {event.description}
-              </p>
-            )
-          )}
-        </div>
-
-        <div className="flex items-center gap-3 justify-between md:justify-end shrink-0">
-          {event.hash && <TxPill hash={event.hash} status={event.status} />}
-          <span className="font-ds-mono text-[10px] text-ds-text-3 shrink-0 select-none min-w-[54px] text-right">
-            {event.timestamp}
-          </span>
-        </div>
-      </div>
+      {dense ? (
+        <CompactCard event={event} />
+      ) : (
+        <>
+          {/* Mobile: compact · Desktop (md+): aligned table */}
+          <div className="md:hidden">
+            <CompactCard event={event} />
+          </div>
+          <div className="hidden md:block">
+            <TableCard event={event} />
+          </div>
+        </>
+      )}
     </PhosphorPulse>
   );
 }
