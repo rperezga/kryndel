@@ -146,6 +146,15 @@ export default async function ContractPage({ params }: Props) {
 
   const eventNames = [...new Set(events.map((e) => e.name as string).filter(Boolean))].slice(0, 30);
 
+  // Public page: never expose internal owner fields (_id / userId) in the raw doc.
+  const rawContractSafe: Record<string, unknown> = (() => {
+    if (!contract) return { address, surface, notIndexed: true };
+    const { _id, userId, ...rest } = contract as Record<string, unknown>;
+    void _id;
+    void userId;
+    return rest;
+  })();
+
   return (
     <>
       {/* JSON-LD */}
@@ -175,7 +184,7 @@ export default async function ContractPage({ params }: Props) {
         userHasContract={userHasContract}
         userId={userId}
         alertRules={ser(userAlertRules) as Record<string, unknown>[]}
-        rawContract={ser(contract ?? { address, surface, notIndexed: true }) as Record<string, unknown>}
+        rawContract={ser(rawContractSafe) as Record<string, unknown>}
         actionButton={
           <AddToDashboardButton
             address={address}
