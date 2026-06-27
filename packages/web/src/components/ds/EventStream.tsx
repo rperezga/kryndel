@@ -48,7 +48,7 @@ function PartyChip({ address }: { address?: string }) {
   if (!address) return null;
   return (
     <span
-      className="inline-flex items-center font-ds-mono text-[11px] max-w-[150px] truncate"
+      className="inline-flex items-center font-ds-mono text-[11px] max-w-[160px] truncate"
       title={address}
     >
       {label ? (
@@ -60,7 +60,11 @@ function PartyChip({ address }: { address?: string }) {
   );
 }
 
-/** One event row — uses the full card width across two balanced rows. */
+/**
+ * One event row laid out as a single table-like line that fills the card width:
+ *   [TYPE] [contract]  ──  from → to · value (grows)  ──  [tx] [timestamp]
+ * Stacks vertically on mobile.
+ */
 function EventCard({ event }: { event: StreamEvent }) {
   const hasParties = !!(event.from && event.to);
 
@@ -68,51 +72,55 @@ function EventCard({ event }: { event: StreamEvent }) {
     <PhosphorPulse active={!!event.isNew}>
       <div
         className={cn(
-          'flex flex-col gap-2.5 bg-ds-shell border border-solid border-ds-border/60 rounded-md px-3.5 py-3 transition-colors duration-150 hover:bg-ds-panel-2/20',
+          'flex flex-col md:flex-row md:items-center gap-2 md:gap-4 bg-ds-shell border border-solid border-ds-border/60 rounded-md px-3.5 py-2.5 transition-colors duration-150 hover:bg-ds-panel-2/20',
           event.isNew ? 'border-ds-green/40' : ''
         )}
       >
-        {/* Row 1 — type + contract (left) · timestamp (right) */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="font-ds-mono text-[10px] font-bold text-ds-green uppercase tracking-wide bg-ds-green/10 border border-solid border-ds-green/20 rounded px-1.5 py-0.5 shrink-0 select-none">
-              {event.type}
-            </span>
-            {event.address && <AddressPill address={event.address} />}
-          </div>
+        {/* Type + contract */}
+        <div className="flex items-center gap-2.5 shrink-0 min-w-0">
+          <span className="font-ds-mono text-[10px] font-bold text-ds-green uppercase tracking-wide bg-ds-green/10 border border-solid border-ds-green/20 rounded px-1.5 py-0.5 shrink-0 select-none">
+            {event.type}
+          </span>
+          {event.address && <AddressPill address={event.address} />}
+        </div>
+
+        {/* Middle — from → to + value (grows to fill), or description */}
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {hasParties ? (
+            <>
+              <span className="font-ds-mono text-[8px] uppercase tracking-widest text-ds-text-3 select-none shrink-0">
+                from
+              </span>
+              <PartyChip address={event.from} />
+              <span className="text-ds-text-3 shrink-0 px-0.5">→</span>
+              <span className="font-ds-mono text-[8px] uppercase tracking-widest text-ds-text-3 select-none shrink-0">
+                to
+              </span>
+              <PartyChip address={event.to} />
+              {event.value && (
+                <span
+                  className="font-ds-mono text-[11px] text-ds-text-3 ml-1.5 shrink-0"
+                  title={event.value}
+                >
+                  · {fmtValue(event.value)}
+                </span>
+              )}
+            </>
+          ) : (
+            event.description && (
+              <p className="font-ds-sans text-xs text-ds-text-2 leading-relaxed truncate min-w-0">
+                {event.description}
+              </p>
+            )
+          )}
+        </div>
+
+        {/* Right — tx + timestamp */}
+        <div className="flex items-center gap-3 shrink-0 justify-between md:justify-end">
+          {event.hash && <TxPill hash={event.hash} status={event.status} />}
           <span className="font-ds-mono text-[10px] text-ds-text-3 shrink-0 select-none">
             {event.timestamp}
           </span>
-        </div>
-
-        {/* Row 2 — from → to + value (left) · tx (right) */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            {hasParties ? (
-              <>
-                <span className="font-ds-mono text-[8px] uppercase tracking-widest text-ds-text-3 select-none shrink-0">from</span>
-                <PartyChip address={event.from} />
-                <span className="text-ds-text-3 shrink-0 px-0.5">→</span>
-                <span className="font-ds-mono text-[8px] uppercase tracking-widest text-ds-text-3 select-none shrink-0">to</span>
-                <PartyChip address={event.to} />
-                {event.value && (
-                  <span
-                    className="font-ds-mono text-[11px] text-ds-text-3 ml-1.5 shrink-0"
-                    title={event.value}
-                  >
-                    · {fmtValue(event.value)}
-                  </span>
-                )}
-              </>
-            ) : (
-              event.description && (
-                <p className="font-ds-sans text-xs text-ds-text-2 leading-relaxed truncate min-w-0">
-                  {event.description}
-                </p>
-              )
-            )}
-          </div>
-          {event.hash && <TxPill hash={event.hash} status={event.status} />}
         </div>
       </div>
     </PhosphorPulse>
