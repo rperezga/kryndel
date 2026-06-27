@@ -48,7 +48,7 @@ function PartyChip({ address }: { address?: string }) {
   if (!address) return null;
   return (
     <span
-      className="inline-flex items-center font-ds-mono text-[11px] max-w-[160px] truncate"
+      className="inline-flex items-center font-ds-mono text-[11px] max-w-[170px] truncate"
       title={address}
     >
       {label ? (
@@ -61,9 +61,9 @@ function PartyChip({ address }: { address?: string }) {
 }
 
 /**
- * One event row laid out as a single table-like line that fills the card width:
- *   [TYPE] [contract]  ──  from → to · value (grows)  ──  [tx] [timestamp]
- * Stacks vertically on mobile.
+ * One event row as a fixed-column grid so every row's columns line up:
+ *   [TYPE 120] [CONTRACT 210] [ from → to · value  (grows) ] [ tx · status · time ]
+ * Stacks on mobile.
  */
 function EventCard({ event }: { event: StreamEvent }) {
   const hasParties = !!(event.from && event.to);
@@ -72,20 +72,27 @@ function EventCard({ event }: { event: StreamEvent }) {
     <PhosphorPulse active={!!event.isNew}>
       <div
         className={cn(
-          'flex flex-col md:flex-row md:items-center gap-2 md:gap-4 bg-ds-shell border border-solid border-ds-border/60 rounded-md px-3.5 py-2.5 transition-colors duration-150 hover:bg-ds-panel-2/20',
+          'grid grid-cols-1 md:grid-cols-[120px_210px_minmax(0,1fr)_auto] md:items-center gap-x-4 gap-y-1.5 bg-ds-shell border border-solid border-ds-border/60 rounded-md px-3.5 py-2.5 transition-colors duration-150 hover:bg-ds-panel-2/20',
           event.isNew ? 'border-ds-green/40' : ''
         )}
       >
-        {/* Type + contract */}
-        <div className="flex items-center gap-2.5 shrink-0 min-w-0">
-          <span className="font-ds-mono text-[10px] font-bold text-ds-green uppercase tracking-wide bg-ds-green/10 border border-solid border-ds-green/20 rounded px-1.5 py-0.5 shrink-0 select-none">
+        {/* Col 1 — type */}
+        <div className="min-w-0">
+          <span
+            className="inline-block max-w-full truncate align-middle font-ds-mono text-[10px] font-bold text-ds-green uppercase tracking-wide bg-ds-green/10 border border-solid border-ds-green/20 rounded px-1.5 py-0.5 select-none"
+            title={event.type}
+          >
             {event.type}
           </span>
-          {event.address && <AddressPill address={event.address} />}
         </div>
 
-        {/* Middle — from → to + value (grows to fill), or description */}
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+        {/* Col 2 — contract */}
+        <div className="min-w-0 flex">
+          {event.address && <AddressPill address={event.address} className="max-w-full" />}
+        </div>
+
+        {/* Col 3 — from → to + value (grows), or description */}
+        <div className="flex items-center gap-2 min-w-0">
           {hasParties ? (
             <>
               <span className="font-ds-mono text-[8px] uppercase tracking-widest text-ds-text-3 select-none shrink-0">
@@ -115,10 +122,10 @@ function EventCard({ event }: { event: StreamEvent }) {
           )}
         </div>
 
-        {/* Right — tx + timestamp */}
-        <div className="flex items-center gap-3 shrink-0 justify-between md:justify-end">
+        {/* Col 4 — tx + status + timestamp */}
+        <div className="flex items-center gap-3 justify-between md:justify-end shrink-0">
           {event.hash && <TxPill hash={event.hash} status={event.status} />}
-          <span className="font-ds-mono text-[10px] text-ds-text-3 shrink-0 select-none">
+          <span className="font-ds-mono text-[10px] text-ds-text-3 shrink-0 select-none min-w-[54px] text-right">
             {event.timestamp}
           </span>
         </div>
