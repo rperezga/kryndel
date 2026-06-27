@@ -8,7 +8,7 @@ import { resolveAddressLabel } from '@/lib/address-labels';
 
 interface TraceEvent {
   t: number;
-  kind: 'call' | 'event' | 'emit';
+  kind: 'call' | 'event' | 'emit' | 'state';
   label: string;
   data?: Record<string, unknown>;
 }
