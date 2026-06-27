@@ -24,3 +24,7 @@ export { traceEvmTx, traceNativeTx } from './tracer.js';
 
 // Decoder — used by tracer internally, also exported for ABI decoding in pages
 export { createEvmDecoder, ERC20_ABI } from './decoder.js';
+
+// Sentinel — XRPL (L1) issuer security & health. Pure fetch-based JSON-RPC,
+// safe server-side. Used by snapshot pages and the worker issuer watcher.
+export * from './sentinel.js';

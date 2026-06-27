@@ -17,6 +17,7 @@ const FOOTER_LINKS: FooterLink[] = [
   { label: 'Pricing',  href: '/pricing'                                              },
   { label: 'Explorer', href: '/explorer'                                             },
   { label: 'Decode tx', href: '/decode'                                              },
+  { label: 'Token check', href: '/sentinel'                                          },
   { label: 'Docs',     href: '/docs'                                                 },
   { label: 'GitHub',   href: 'https://github.com/rperezga/kryndel', external: true  },
   { label: 'Sign in',  href: '/login'                                                },

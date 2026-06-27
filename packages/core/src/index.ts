@@ -8,4 +8,5 @@ export * from './pipeline.js';
 export * from './subscriber.js';
 export * from './alerts.js';
 export * from './tracer.js';
+export * from './sentinel.js';
 export * from './ssrf.js';
