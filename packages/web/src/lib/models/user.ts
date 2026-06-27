@@ -39,18 +39,21 @@ export type Plan_ = Plan; // re-export alias for worker
 export const PLAN_LIMITS: Record<Plan, {
   maxContracts:        number;
   maxRulesPerContract: number;
+  maxIssuers:          number;   // Sentinel: watched XRPL issuer accounts
   historyDays:         number;   // how far back events are shown in queries
   channels:            string[]; // allowed alert dispatch channels
 }> = {
   free: {
     maxContracts:        3,
     maxRulesPerContract: 1,
+    maxIssuers:          1,
     historyDays:         7,
     channels:            ['telegram'],
   },
   pro: {
     maxContracts:        20,
     maxRulesPerContract: 10,
+    maxIssuers:          25,
     historyDays:         90,
     channels:            ['telegram', 'discord', 'webhook', 'email'],
   },

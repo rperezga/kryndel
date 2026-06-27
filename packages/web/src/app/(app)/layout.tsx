@@ -155,6 +155,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               Webhooks
             </SideNavLink>
             <SideNavLink
+              href="/dashboard/sentinel"
+              className="flex items-center gap-3 px-3 py-2 text-ds-text-2 hover:text-ds-green hover:bg-ds-panel-2 rounded transition-all font-ds-mono text-xs no-underline"
+            >
+              Sentinel
+            </SideNavLink>
+            <SideNavLink
               href="/explorer"
               className="flex items-center gap-3 px-3 py-2 text-ds-text-2 hover:text-ds-green hover:bg-ds-panel-2 rounded transition-all font-ds-mono text-xs no-underline"
             >
