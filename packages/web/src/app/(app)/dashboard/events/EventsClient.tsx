@@ -37,11 +37,18 @@ function formatDbEvent(e: any): StreamEvent {
   // Resolve raw topic0 hashes (legacy/undecoded rows) to a readable name.
   const evName = resolveEventName(e.name);
 
+  // Structured transfer parties (Transfer: from/to/value · Approval: owner/spender)
+  const args = e.args || {};
+  const fromRaw = args.from ?? args.owner;
+  const toRaw = args.to ?? args.spender;
+  const valueRaw = args.value ?? args.amount;
+  const fromStr = fromRaw != null ? String(fromRaw) : undefined;
+  const toStr = toRaw != null ? String(toRaw) : undefined;
+  const valueStr = valueRaw != null ? String(valueRaw) : undefined;
+
   let description = '';
-  if (evName === 'Transfer' && e.args && (e.args.from || e.args.to)) {
-    description = `Transfer of ${e.args.value || e.args.amount || 'units'} from ${String(e.args.from).slice(0, 8)}… to ${String(e.args.to).slice(0, 8)}…`;
-  } else if (evName === 'Approval' && e.args) {
-    description = `Approved spender ${String(e.args.spender).slice(0, 8)}… for ${e.args.value || e.args.amount || 'units'}`;
+  if (fromStr && toStr) {
+    description = ''; // from → to rendered structurally by the card
   } else if (e.args && Object.keys(e.args).length > 0) {
     description = `${evName} with args: ${Object.entries(e.args)
       .slice(0, 3)
@@ -65,6 +72,9 @@ function formatDbEvent(e: any): StreamEvent {
     type: evName.toUpperCase(),
     description,
     address: e.contractAddress || e.contract,
+    from: fromStr,
+    to: toStr,
+    value: valueStr,
     hash: e.txHash,
     status,
   };

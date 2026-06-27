@@ -6,6 +6,7 @@ import { LivePill, PhosphorPulse } from './LiveIndicator';
 import { Button } from './Button';
 import { AddressPill } from './AddressPill';
 import { TxPill } from './TxPill';
+import { useAddressLabel } from './AddressLabelProvider';
 
 export interface StreamEvent {
   id: string;
@@ -13,6 +14,9 @@ export interface StreamEvent {
   type: string;
   description: string;
   address?: string;
+  from?: string;
+  to?: string;
+  value?: string;
   hash?: string;
   status?: 'success' | 'reverted' | 'pending';
   isNew?: boolean; // triggers phosphor pulse
@@ -21,6 +25,98 @@ export interface StreamEvent {
 export interface EventStreamProps extends React.HTMLAttributes<HTMLDivElement> {
   events: StreamEvent[];
   maxHeight?: string;
+}
+
+// Compact magnitude for big uint values: 400000000000000000000 → 4e20
+function fmtValue(v?: string): string {
+  if (!v) return '';
+  if (!/^\d+$/.test(v)) return v;
+  if (v.length <= 9) return v;
+  const exp = v.length - 1;
+  const mant = (v[0] + '.' + v.slice(1, 3)).replace(/\.?0+$/, '');
+  return `${mant}e${exp}`;
+}
+
+function shortAddr(a?: string): string {
+  if (!a) return '';
+  return a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
+}
+
+/** A transfer party: shows its label (green) when known, else the short address. */
+function PartyChip({ address }: { address?: string }) {
+  const label = useAddressLabel(address ?? '');
+  if (!address) return null;
+  return (
+    <span
+      className="inline-flex items-center font-ds-mono text-[11px] max-w-[150px] truncate"
+      title={address}
+    >
+      {label ? (
+        <span className="text-ds-green font-semibold truncate">{label}</span>
+      ) : (
+        <span className="text-ds-text-2">{shortAddr(address)}</span>
+      )}
+    </span>
+  );
+}
+
+/** One event row — uses the full card width across two balanced rows. */
+function EventCard({ event }: { event: StreamEvent }) {
+  const hasParties = !!(event.from && event.to);
+
+  return (
+    <PhosphorPulse active={!!event.isNew}>
+      <div
+        className={cn(
+          'flex flex-col gap-2.5 bg-ds-shell border border-solid border-ds-border/60 rounded-md px-3.5 py-3 transition-colors duration-150 hover:bg-ds-panel-2/20',
+          event.isNew ? 'border-ds-green/40' : ''
+        )}
+      >
+        {/* Row 1 — type + contract (left) · timestamp (right) */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="font-ds-mono text-[10px] font-bold text-ds-green uppercase tracking-wide bg-ds-green/10 border border-solid border-ds-green/20 rounded px-1.5 py-0.5 shrink-0 select-none">
+              {event.type}
+            </span>
+            {event.address && <AddressPill address={event.address} />}
+          </div>
+          <span className="font-ds-mono text-[10px] text-ds-text-3 shrink-0 select-none">
+            {event.timestamp}
+          </span>
+        </div>
+
+        {/* Row 2 — from → to + value (left) · tx (right) */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            {hasParties ? (
+              <>
+                <span className="font-ds-mono text-[8px] uppercase tracking-widest text-ds-text-3 select-none shrink-0">from</span>
+                <PartyChip address={event.from} />
+                <span className="text-ds-text-3 shrink-0 px-0.5">→</span>
+                <span className="font-ds-mono text-[8px] uppercase tracking-widest text-ds-text-3 select-none shrink-0">to</span>
+                <PartyChip address={event.to} />
+                {event.value && (
+                  <span
+                    className="font-ds-mono text-[11px] text-ds-text-3 ml-1.5 shrink-0"
+                    title={event.value}
+                  >
+                    · {fmtValue(event.value)}
+                  </span>
+                )}
+              </>
+            ) : (
+              event.description && (
+                <p className="font-ds-sans text-xs text-ds-text-2 leading-relaxed truncate min-w-0">
+                  {event.description}
+                </p>
+              )
+            )}
+          </div>
+          {event.hash && <TxPill hash={event.hash} status={event.status} />}
+        </div>
+      </div>
+    </PhosphorPulse>
+  );
 }
 
 export function EventStream({
@@ -108,43 +204,7 @@ export function EventStream({
         )}
 
         {events.map((event) => (
-          <PhosphorPulse key={event.id} active={!!event.isNew}>
-            <div
-              className={cn(
-                'flex items-start justify-between bg-ds-shell border border-solid border-ds-border/60 rounded-md p-3 transition-colors duration-150 hover:bg-ds-panel-2/20',
-                event.isNew ? 'border-ds-green/40' : ''
-              )}
-            >
-              <div className="flex flex-col gap-1.5 min-w-0 flex-1">
-                {/* Event Row Header: Type + Timestamp */}
-                <div className="flex items-center gap-2 select-none min-w-0">
-                  <span className="font-ds-mono text-[10px] font-bold text-ds-green uppercase tracking-wide truncate min-w-0">
-                    {event.type}
-                  </span>
-                  <span className="font-ds-mono text-[9px] text-ds-text-3 shrink-0 ml-auto">
-                    {event.timestamp}
-                  </span>
-                </div>
-
-                {/* Event Row Content Description (solo si hay algo útil) */}
-                {event.description && (
-                  <p className="font-ds-sans text-xs text-ds-text-2 leading-relaxed truncate pr-4">
-                    {event.description}
-                  </p>
-                )}
-
-                {/* Event Row Metadata Actions (Pills) */}
-                {(event.address || event.hash) && (
-                  <div className="flex flex-wrap items-center gap-2 mt-1">
-                    {event.address && <AddressPill address={event.address} />}
-                    {event.hash && (
-                      <TxPill hash={event.hash} status={event.status} />
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </PhosphorPulse>
+          <EventCard key={event.id} event={event} />
         ))}
       </div>
 
