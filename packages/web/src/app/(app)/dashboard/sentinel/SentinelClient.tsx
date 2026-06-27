@@ -52,6 +52,8 @@ function Mini({ label, value, tone = 'default' }: { label: string; value: string
 export function SentinelClient({ issuers, maxIssuers, plan }: Props) {
   const [address, setAddress] = useState('');
   const [label, setLabel] = useState('');
+  const [channel, setChannel] = useState('none');
+  const [target, setTarget] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -63,7 +65,7 @@ export function SentinelClient({ issuers, maxIssuers, plan }: Props) {
     setError(null);
     setSuccess(null);
     startTransition(async () => {
-      const res = await addIssuerAction(address, label);
+      const res = await addIssuerAction(address, label, channel, target);
       if (res.error) {
         setError(res.error);
       } else {
@@ -125,6 +127,27 @@ export function SentinelClient({ issuers, maxIssuers, plan }: Props) {
           >
             {isPending ? 'Working…' : 'Watch issuer'}
           </button>
+        </div>
+        <div className="flex flex-col md:flex-row gap-2">
+          <select
+            value={channel}
+            onChange={(e) => setChannel(e.target.value)}
+            className="md:w-60 bg-ds-shell border border-solid border-ds-border rounded px-3 py-2.5 font-ds-mono text-xs text-ds-text focus:border-ds-green outline-none cursor-pointer"
+          >
+            <option value="none">Alerts: none (monitor only)</option>
+            <option value="telegram">Alert via Telegram</option>
+            <option value="discord">Alert via Discord webhook</option>
+            <option value="webhook">Alert via custom webhook</option>
+          </select>
+          {channel !== 'none' && (
+            <input
+              value={target}
+              onChange={(e) => { setTarget(e.target.value); if (error) setError(null); }}
+              placeholder={channel === 'telegram' ? 'Telegram Chat ID (e.g. -100123…)' : 'https://… webhook URL'}
+              spellCheck={false}
+              className="flex-1 bg-ds-shell border border-solid border-ds-border rounded px-3 py-2.5 font-ds-mono text-xs text-ds-text focus:border-ds-green outline-none placeholder:text-ds-text-3"
+            />
+          )}
         </div>
         {atLimit && (
           <p className="font-ds-mono text-[11px] text-ds-amber m-0">

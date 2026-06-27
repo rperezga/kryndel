@@ -17,7 +17,7 @@ import { getDb } from './db.js';
 
 // ── Telegram ─────────────────────────────────────────────────────────────────
 
-async function sendTelegram(chatId: string, text: string): Promise<void> {
+export async function sendTelegram(chatId: string, text: string): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) {
     console.warn('[dispatcher] TELEGRAM_BOT_TOKEN not set — skipping');
@@ -37,7 +37,7 @@ async function sendTelegram(chatId: string, text: string): Promise<void> {
 
 // ── Webhook ───────────────────────────────────────────────────────────────────
 
-async function sendWebhook(url: string, payload: Record<string, unknown>): Promise<void> {
+export async function sendWebhook(url: string, payload: Record<string, unknown>): Promise<void> {
   // Final defence — rules may predate the tightened guard.
   await assertSafePublicUrl(url);
   const res = await fetch(url, {
@@ -52,7 +52,7 @@ async function sendWebhook(url: string, payload: Record<string, unknown>): Promi
 
 // ── Discord ───────────────────────────────────────────────────────────────────
 
-async function sendDiscord(webhookUrl: string, content: string): Promise<void> {
+export async function sendDiscord(webhookUrl: string, content: string): Promise<void> {
   await assertSafePublicUrl(webhookUrl);
   const res = await fetch(webhookUrl, {
     method:  'POST',

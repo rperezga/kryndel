@@ -376,3 +376,68 @@ function securityFlagDetail(name: string, enabling: boolean): string {
       return `${name} ${enabling ? 'enabled' : 'disabled'}.`;
   }
 }
+
+// ── account_tx scanner (used by the worker issuer watcher) ────────────────────
+
+export interface AccountTxResult {
+  /** Security-relevant changes, oldest-first. */
+  changes: SecurityChange[];
+  /** Highest ledger index seen (use as the next ledgerIndexMin - 1 marker). */
+  maxLedger: number;
+  /** Total transactions scanned. */
+  scanned: number;
+}
+
+/**
+ * Fetch recent account transactions for an issuer and return only the
+ * security-relevant ones (classified). Pass `ledgerIndexMin` to restrict to
+ * ledgers strictly newer than what you have already processed.
+ */
+export async function fetchAccountSecurityTxs(
+  address: string,
+  opts: SentinelOptions & { ledgerIndexMin?: number; limit?: number } = {},
+): Promise<AccountTxResult> {
+  const res = await xrplRpc<{ transactions?: unknown[] }>(
+    'account_tx',
+    {
+      account: address,
+      ledger_index_min: opts.ledgerIndexMin ?? -1,
+      ledger_index_max: -1,
+      binary: false,
+      forward: false,
+      limit: opts.limit ?? 30,
+    },
+    opts,
+  );
+
+  const txs = Array.isArray(res.transactions) ? res.transactions : [];
+  const changes: SecurityChange[] = [];
+  let maxLedger = opts.ledgerIndexMin ?? 0;
+
+  for (const entry of txs) {
+    const e = entry as {
+      tx?: { ledger_index?: number; inLedger?: number };
+      tx_json?: { ledger_index?: number };
+      ledger_index?: number;
+    };
+    const ledger = Number(
+      e.tx?.ledger_index ?? e.tx?.inLedger ?? e.ledger_index ?? e.tx_json?.ledger_index ?? 0,
+    );
+    if (ledger > maxLedger) maxLedger = ledger;
+    const change = classifyAccountTx(entry);
+    if (change) changes.push(change);
+  }
+
+  changes.reverse(); // API returns newest-first → emit oldest-first
+  return { changes, maxLedger, scanned: txs.length };
+}
+
+/** Sum issued supply per currency from a snapshot's obligations. */
+export function totalSupplyByCurrency(snapshot: IssuerSnapshot): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const o of snapshot.obligations) {
+    const n = Number(o.value);
+    if (Number.isFinite(n)) out[o.currency] = n;
+  }
+  return out;
+}

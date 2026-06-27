@@ -3,6 +3,7 @@
 import { getDb } from '@/lib/db';
 import { requireUser } from '@/lib/current-user';
 import { PLAN_LIMITS, type Plan } from '@/lib/models/user';
+import { assertSafePublicUrl } from '@/lib/ssrf';
 import { revalidatePath } from 'next/cache';
 
 export interface ActionResponse {
@@ -13,7 +14,12 @@ export interface ActionResponse {
 const R_ADDR = /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/;
 
 /** Add an XRPL issuer account to watch with Sentinel. */
-export async function addIssuerAction(address: string, label: string): Promise<ActionResponse> {
+export async function addIssuerAction(
+  address: string,
+  label: string,
+  channel?: string,
+  target?: string,
+): Promise<ActionResponse> {
   let user;
   try {
     user = await requireUser();
@@ -29,7 +35,30 @@ export async function addIssuerAction(address: string, label: string): Promise<A
 
   const db = await getDb();
   const plan: Plan = user.plan === 'pro' ? 'pro' : 'free';
-  const limit = PLAN_LIMITS[plan].maxIssuers;
+  const limits = PLAN_LIMITS[plan];
+  const limit = limits.maxIssuers;
+
+  // Optional alert destination (where security alerts are delivered).
+  const ch = (channel ?? '').trim();
+  const tg = (target ?? '').trim();
+  let alert: { alertChannel: string; alertTarget: string } | undefined;
+  if (ch && ch !== 'none') {
+    if (!['telegram', 'discord', 'webhook'].includes(ch)) return { error: 'Invalid alert channel.' };
+    if (!limits.channels.includes(ch)) {
+      return { error: `The ${ch} channel is not available on the ${plan} plan. Upgrade to Pro.` };
+    }
+    if (!tg) return { error: 'An alert destination is required for the selected channel.' };
+    if (ch === 'telegram') {
+      if (!/^-?\d{5,15}$/.test(tg)) return { error: 'Telegram Chat ID must be an integer (e.g. -1001234567890).' };
+    } else {
+      try {
+        await assertSafePublicUrl(tg);
+      } catch (e) {
+        return { error: e instanceof Error ? e.message : 'Invalid webhook URL.' };
+      }
+    }
+    alert = { alertChannel: ch, alertTarget: tg };
+  }
 
   const existing = await db.collection('issuers').findOne({ userId: user._id, address: addr });
   if (existing) return { error: 'You are already watching this issuer.' };
@@ -40,6 +69,7 @@ export async function addIssuerAction(address: string, label: string): Promise<A
     address: addr,
     label: cleanLabel || `${addr.slice(0, 6)}…${addr.slice(-4)}`,
     active: true,
+    ...(alert ?? {}),
     createdAt: now,
     updatedAt: now,
   });

@@ -13,6 +13,7 @@ import { WatcherPool }       from './watcher-pool.js';
 import { startReconcileLoop } from './reconcile.js';
 import { closeDb, getDb }    from './db.js';
 import { processRetries }    from './webhook-deliverer.js';
+import { startSentinelLoop } from './sentinel-loop.js';
 
 const PORT = parseInt(process.env.PORT ?? '8080', 10);
 
@@ -34,6 +35,10 @@ if (!process.env.TELEGRAM_BOT_TOKEN) {
 
 const pool = new WatcherPool();
 const stopReconcile = startReconcileLoop(pool);
+
+// ── Sentinel: XRPL issuer security & health watcher ───────────────────────────
+
+const stopSentinel = startSentinelLoop();
 
 // ── Webhook retry loop (60s interval) ─────────────────────────────────────────
 
@@ -59,7 +64,7 @@ const server = createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/healthz') {
     const body = JSON.stringify({
       status:     'ok',
-      build:      'abi-live-v1',
+      build:      'sentinel-v1',
       uptime:     process.uptime(),
       watchers:   pool.size,
       activeKeys: pool.activeKeys,
@@ -83,6 +88,7 @@ async function shutdown(signal: string): Promise<void> {
   console.log(`[worker] ${signal} received -- shutting down`);
   _retryLoopActive = false;
   stopReconcile();
+  stopSentinel();
   await pool.stopAll();
   await closeDb();
   server.close(() => {
