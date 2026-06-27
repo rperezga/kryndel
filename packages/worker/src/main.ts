@@ -59,7 +59,7 @@ const server = createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/healthz') {
     const body = JSON.stringify({
       status:     'ok',
-      build:      'resilient-watcher-v1',
+      build:      'abi-live-v1',
       uptime:     process.uptime(),
       watchers:   pool.size,
       activeKeys: pool.activeKeys,

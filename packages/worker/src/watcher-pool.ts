@@ -108,6 +108,7 @@ export type ActivityHandler = (
 interface PoolEntry {
   watcher:  Watcher;
   contract: WContract;
+  rules:    WAlertRule[];
 }
 
 export class WatcherPool {
@@ -144,35 +145,48 @@ export class WatcherPool {
       }
     }
 
-    // Start watchers for new contracts.
+    // Start new watchers; refresh contract + rules on existing ones so ABI /
+    // rule changes from the reconcile loop take effect within one interval
+    // (no restart needed — e.g. an auto-fetched ABI starts decoding live).
     let started = 0;
     for (const [key, contract] of desired) {
-      if (this.entries.has(key)) continue;
+      const rules = rulesByContract.get(key) ?? [];
+
+      const existing = this.entries.get(key);
+      if (existing) {
+        existing.contract = contract; // pick up ABI / label changes
+        existing.rules = rules;       // pick up rule changes
+        continue;
+      }
 
       const watcher = this.createWatcher(contract, rulesByContract);
-      this.entries.set(key, { watcher, contract });
+      this.entries.set(key, { watcher, contract, rules });
 
       watcher.start(async (activity) => {
-        const rules = rulesByContract.get(key) ?? [];
+        // Read the LATEST contract + rules from the live entry, so an ABI or rule
+        // update applies on the next event without restarting the watcher.
+        const cur = this.entries.get(key);
+        const liveContract = cur?.contract ?? contract;
+        const liveRules = cur?.rules ?? rules;
 
         // F1: Decode EVM events before dispatching (topic0 → named event + args)
-        const decoded = contract.surface === 'evm'
-          ? decodeEvmActivity(activity, contract)
+        const decoded = liveContract.surface === 'evm'
+          ? decodeEvmActivity(activity, liveContract)
           : activity;
 
         // 1. Dispatch alert rules (Telegram/Discord/webhook alerts)
-        await dispatch(decoded, rules, contract.address).catch((e) =>
+        await dispatch(decoded, liveRules, liveContract.address).catch((e) =>
           console.error(`[pool] dispatch error for ${key}:`, e),
         );
 
         // 2. Persist the DECODED event so the dashboard / explorer Event Stream
         //    reflects live worker activity (previously only seed / watch-seed).
-        await persistEvent(decoded, contract);
+        await persistEvent(decoded, liveContract);
 
         // 3. Deliver to outbound webhook endpoints (PB-core) with the DECODED
         //    activity so eventName filtering + payload use the human name.
         getDb().then((db) =>
-          deliverWebhooks(db, contract.address, decoded, contract.userId).catch((e) =>
+          deliverWebhooks(db, liveContract.address, decoded, liveContract.userId).catch((e) =>
             console.error(`[pool] webhook delivery error for ${key}:`, e),
           ),
         ).catch((e) => console.error(`[pool] getDb error:`, e));

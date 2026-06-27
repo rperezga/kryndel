@@ -11,6 +11,7 @@ import {
   deleteContract,
   addContractAction,
   renameContract,
+  autoFetchAbi,
 } from './actions';
 import AbiUploadModal from '../AbiUploadModal';
 
@@ -82,6 +83,9 @@ export function ContractsClient({
   // Inline label editing
   const [editingAddr, setEditingAddr] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+
+  // ABI auto-fetch (address currently being fetched)
+  const [abiFetching, setAbiFetching] = useState<string | null>(null);
 
   const searchParams = useSearchParams();
   useEffect(() => {
@@ -200,6 +204,19 @@ export function ContractsClient({
       alert(`Error renaming: ${res.error}`);
       setData(backup);
     }
+  };
+
+  // Auto-fetch the verified ABI from the explorer for a contract.
+  const handleAutoFetchAbi = async (address: string) => {
+    setAbiFetching(address);
+    const res = await autoFetchAbi(address);
+    setAbiFetching(null);
+    if (res.error) {
+      alert(res.error);
+      return;
+    }
+    alert(res.success ?? 'ABI fetched.');
+    window.location.reload();
   };
 
   // Add contract submit handler
@@ -350,6 +367,18 @@ export function ContractsClient({
               <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>edit</span>
             </button>
             <AbiUploadModal address={c.address} hasAbi={!!c.abi} />
+            {c.surface === 'evm' && (
+              <button
+                onClick={() => handleAutoFetchAbi(c.address)}
+                disabled={abiFetching === c.address}
+                className="p-1 hover:text-ds-green text-ds-text-3 bg-transparent border-0 cursor-pointer transition-colors flex items-center outline-none disabled:opacity-40"
+                title="Auto-fetch verified ABI from explorer"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                  {abiFetching === c.address ? 'hourglass_top' : 'cloud_download'}
+                </span>
+              </button>
+            )}
             <button
               onClick={() => handleToggleActive(c.address, !c.active)}
               className="p-1 hover:text-ds-green text-ds-text-3 bg-transparent border-0 cursor-pointer transition-colors flex items-center outline-none"
@@ -547,6 +576,15 @@ export function ContractsClient({
                       Rename
                     </button>
                     <AbiUploadModal address={c.address} hasAbi={!!c.abi} />
+                    {c.surface === 'evm' && (
+                      <button
+                        onClick={() => handleAutoFetchAbi(c.address)}
+                        disabled={abiFetching === c.address}
+                        className="px-3 py-1.5 text-xs text-ds-text-2 hover:text-ds-green border border-solid border-ds-border rounded bg-ds-panel-2/20 cursor-pointer outline-none disabled:opacity-40"
+                      >
+                        {abiFetching === c.address ? 'Fetching…' : 'Auto ABI'}
+                      </button>
+                    )}
                     <button
                       onClick={() => handleToggleActive(c.address, !c.active)}
                       className="px-3 py-1.5 text-xs text-ds-text-2 hover:text-ds-green border border-solid border-ds-border rounded bg-ds-panel-2/20 cursor-pointer outline-none"
