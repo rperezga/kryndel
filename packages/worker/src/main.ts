@@ -64,7 +64,7 @@ const server = createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/healthz') {
     const body = JSON.stringify({
       status:     'ok',
-      build:      'email-v1',
+      build:      'email-v2',
       uptime:     process.uptime(),
       watchers:   pool.size,
       activeKeys: pool.activeKeys,

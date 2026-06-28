@@ -377,7 +377,7 @@ export async function sendTestAlertAction(
     if (!RESEND_API_KEY) {
       return { error: 'Email delivery is not configured on this server (RESEND_API_KEY missing).' };
     }
-    const from = process.env.ALERT_EMAIL_FROM ?? 'Kryndel Alerts <alerts@kryndel.dev>';
+    const from = process.env.ALERT_EMAIL_FROM ?? process.env.EMAIL_FROM ?? 'Kryndel Alerts <alerts@kryndel.xyz>';
     const safeEvent = cleanEvent.replace(/[<>&"']/g, '');
     try {
       const res = await fetch('https://api.resend.com/emails', {

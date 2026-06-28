@@ -785,3 +785,18 @@ details > summary:focus-visible {
   outline-offset: 2px;
   border-radius: 4px;
 }
+
+/* Dark-theme autofill — stop Chrome painting inputs white/blue on autofill */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--ds-shell) inset !important;
+  -webkit-text-fill-color: var(--ds-text) !important;
+  caret-color: var(--ds-text);
+  border-color: var(--ds-border) !important;
+  /* delay the autofill background swap far into the future */
+  transition: background-color 600000s 0s, color 600000s 0s;
+}

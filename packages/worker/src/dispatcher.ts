@@ -67,7 +67,7 @@ export async function sendDiscord(webhookUrl: string, content: string): Promise<
 // ── Email (Resend HTTP API — no SDK needed) ─────────────────────────────────────
 
 const RESEND_API_KEY   = process.env.RESEND_API_KEY;
-const ALERT_EMAIL_FROM = process.env.ALERT_EMAIL_FROM ?? 'Kryndel Alerts <alerts@kryndel.dev>';
+const ALERT_EMAIL_FROM = process.env.ALERT_EMAIL_FROM ?? process.env.EMAIL_FROM ?? 'Kryndel Alerts <alerts@kryndel.xyz>';
 
 export async function sendEmail(to: string, subject: string, html: string): Promise<void> {
   if (!RESEND_API_KEY) {
