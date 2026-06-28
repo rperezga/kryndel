@@ -14,7 +14,7 @@ import { startReconcileLoop } from './reconcile.js';
 import { closeDb, getDb }    from './db.js';
 import { processRetries }    from './webhook-deliverer.js';
 import { startSentinelLoop } from './sentinel-loop.js';
-import { startHeartbeatLoop } from './heartbeat.js';
+import { startHeartbeatLoop, getHeartbeatState } from './heartbeat.js';
 
 const PORT = parseInt(process.env.PORT ?? '8080', 10);
 
@@ -69,10 +69,11 @@ const server = createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/healthz') {
     const body = JSON.stringify({
       status:     'ok',
-      build:      'heartbeat-v1',
+      build:      'heartbeat-v2',
       uptime:     process.uptime(),
       watchers:   pool.size,
       activeKeys: pool.activeKeys,
+      heartbeat:  getHeartbeatState(),
       ts:         new Date().toISOString(),
     });
     res.writeHead(200, { 'Content-Type': 'application/json' });
