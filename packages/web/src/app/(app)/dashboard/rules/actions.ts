@@ -370,8 +370,34 @@ export async function sendTestAlertAction(
       return { error: `Connection failed: ${err.message}` };
     }
   } else if (channel === 'email') {
-    console.log(`[sendTestAlertAction] Email alert simulation sent to: ${cleanTarget}`);
-    return { success: 'Simulated test email sent to ' + cleanTarget };
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanTarget)) {
+      return { error: 'Invalid destination email address.' };
+    }
+    const RESEND_API_KEY = process.env.RESEND_API_KEY;
+    if (!RESEND_API_KEY) {
+      return { error: 'Email delivery is not configured on this server (RESEND_API_KEY missing).' };
+    }
+    const from = process.env.ALERT_EMAIL_FROM ?? 'Kryndel Alerts <alerts@kryndel.dev>';
+    const safeEvent = cleanEvent.replace(/[<>&"']/g, '');
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from,
+          to: cleanTarget,
+          subject: 'Kryndel test alert — email channel verified',
+          html: `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#111;"><div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#16a34a;font-weight:700;">Kryndel Test Alert</div><h1 style="font-size:22px;margin:8px 0 12px;">Your email channel is verified ✓</h1><p style="font-size:14px;color:#444;">Test event: <b>${safeEvent}</b> · Status: Active and Verified.</p><p style="font-size:12px;color:#999;margin-top:24px;">If you received this, real-time alerts to this address will be delivered. Manage alerts at <a href="https://kryndel.dev/dashboard/rules" style="color:#16a34a;">kryndel.dev</a>.</p></div>`,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        return { error: `Resend returned ${res.status}: ${body}` };
+      }
+    } catch (err: any) {
+      return { error: `Failed to send test email: ${err.message}` };
+    }
+    return { success: 'Test email sent to ' + cleanTarget };
   } else {
     return { error: `Testing for channel '${channel}' is not supported.` };
   }
