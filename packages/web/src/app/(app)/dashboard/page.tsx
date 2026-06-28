@@ -124,57 +124,45 @@ export default async function DashboardPage({
     console.error('Error fetching EVM block number:', e);
   }
 
-  let lastIndexedBlock: number | null = null;
-  if (userAddresses.length > 0) {
-    const lastEvent = await db.collection('events').findOne(
-      {
-        $or: [
-          { contractAddress: { $in: userAddresses } },
-          { contract: { $in: userAddresses } },
-        ],
-      },
-      { sort: { ledgerOrBlock: -1 } }
-    );
-    if (lastEvent && lastEvent.ledgerOrBlock !== undefined) {
-      lastIndexedBlock = lastEvent.ledgerOrBlock;
-    }
-  }
+  // Worker heartbeat — the REAL indexer-health signal. The worker upserts this
+  // every ~20s with the chain head it just polled, so it reflects whether the
+  // worker is alive and keeping up — independent of whether watched contracts
+  // happen to be emitting events.
+  const heartbeat = await db.collection('worker_heartbeat').findOne({ key: 'evm' });
+  const hbTs = heartbeat?.ts ? new Date(heartbeat.ts as string | number | Date).getTime() : null;
+  const hbBlock = typeof heartbeat?.headBlock === 'number' ? (heartbeat.headBlock as number) : null;
+  const hbAgeMin = hbTs !== null ? (Date.now() - hbTs) / 60000 : null;
 
+  // 6b. Block Lag: how far the worker is behind the chain head right now.
   let blockLagText = '—';
   let blockLagStatus: 'ok' | 'warn' | 'fail' | 'neutral' = 'neutral';
   let blockLagDelta = '';
-
-  if (headBlockNumber !== null && lastIndexedBlock !== null) {
-    const diff = Math.max(0, headBlockNumber - lastIndexedBlock);
-    blockLagText = `${diff} blocks`;
-    blockLagStatus = diff > 50 ? 'fail' : diff > 10 ? 'warn' : 'ok';
+  if (headBlockNumber !== null && hbBlock !== null) {
+    const diff = Math.max(0, headBlockNumber - hbBlock);
+    blockLagText = `${diff} block${diff === 1 ? '' : 's'}`;
+    blockLagStatus = diff > 100 ? 'fail' : diff > 30 ? 'warn' : 'ok';
     blockLagDelta = `Head: #${headBlockNumber.toLocaleString()}`;
-  } else if (lastIndexedBlock !== null) {
-    blockLagText = `—`;
-    blockLagDelta = `Last: #${lastIndexedBlock.toLocaleString()}`;
+  } else if (headBlockNumber !== null) {
+    blockLagDelta = `Head: #${headBlockNumber.toLocaleString()}`;
   }
 
-  // 7. Indexer Health: Ping db & check if latest event is within 15 minutes
+  // 7. Indexer Health: is the worker heartbeat fresh? (worker alive & polling)
   let indexerHealthText = '—';
   let indexerHealthStatus: 'ok' | 'warn' | 'fail' | 'neutral' = 'neutral';
   try {
     await db.command({ ping: 1 });
-    const lastGlobalEvent = await db
-      .collection('events')
-      .findOne({}, { sort: { indexedAt: -1 } });
-    if (lastGlobalEvent) {
-      const lastTime = lastGlobalEvent.indexedAt ? new Date(lastGlobalEvent.indexedAt).getTime() : 0;
-      const diffMin = (Date.now() - lastTime) / 60000;
-      if (diffMin <= 15) {
-        indexerHealthText = '100.0%';
-        indexerHealthStatus = 'ok';
-      } else {
-        indexerHealthText = 'Degraded';
-        indexerHealthStatus = 'warn';
-      }
-    } else {
-      indexerHealthText = '100.0%';
+    if (hbAgeMin === null) {
+      indexerHealthText = 'Starting…';
+      indexerHealthStatus = 'neutral';
+    } else if (hbAgeMin <= 3) {
+      indexerHealthText = 'Live';
       indexerHealthStatus = 'ok';
+    } else if (hbAgeMin <= 10) {
+      indexerHealthText = 'Degraded';
+      indexerHealthStatus = 'warn';
+    } else {
+      indexerHealthText = 'Offline';
+      indexerHealthStatus = 'fail';
     }
   } catch {
     indexerHealthText = 'Offline';

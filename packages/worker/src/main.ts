@@ -14,6 +14,7 @@ import { startReconcileLoop } from './reconcile.js';
 import { closeDb, getDb }    from './db.js';
 import { processRetries }    from './webhook-deliverer.js';
 import { startSentinelLoop } from './sentinel-loop.js';
+import { startHeartbeatLoop } from './heartbeat.js';
 
 const PORT = parseInt(process.env.PORT ?? '8080', 10);
 
@@ -40,6 +41,10 @@ const stopReconcile = startReconcileLoop(pool);
 
 const stopSentinel = startSentinelLoop();
 
+// ── Heartbeat: real indexer-health signal for the dashboard ───────────────────
+
+const stopHeartbeat = startHeartbeatLoop(() => pool.size);
+
 // ── Webhook retry loop (60s interval) ─────────────────────────────────────────
 
 let _retryLoopActive = true;
@@ -64,7 +69,7 @@ const server = createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/healthz') {
     const body = JSON.stringify({
       status:     'ok',
-      build:      'email-v2',
+      build:      'heartbeat-v1',
       uptime:     process.uptime(),
       watchers:   pool.size,
       activeKeys: pool.activeKeys,
@@ -89,6 +94,7 @@ async function shutdown(signal: string): Promise<void> {
   _retryLoopActive = false;
   stopReconcile();
   stopSentinel();
+  stopHeartbeat();
   await pool.stopAll();
   await closeDb();
   server.close(() => {
