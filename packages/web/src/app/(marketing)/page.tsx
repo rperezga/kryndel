@@ -134,7 +134,7 @@ export default function LandingPage() {
               <div className="font-ds-mono text-[11px] text-ds-green mb-2.5">03</div>
               <h3 className="text-base font-bold mb-1.5 text-ds-text">Alert</h3>
               <p className="text-ds-text-2 text-[13.5px] leading-relaxed">
-                Rule fires &rarr; Telegram, webhook or API (SMS, email &amp; push coming soon). Filter by decoded args.
+                Rule fires &rarr; Telegram, Discord, webhook, email or API (SMS &amp; push coming soon). Filter by decoded args.
               </p>
             </li>
             <li className="bg-ds-panel border border-solid border-ds-border rounded-[13px] p-5">
@@ -183,7 +183,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-[17px] font-bold mb-1.75 text-ds-text">Alert</h3>
               <p className="text-ds-text-2 text-sm leading-relaxed">
-                Real-time alerts with arg filters &rarr; Telegram &amp; webhook (SMS, email &amp; push soon).
+                Real-time alerts with arg filters &rarr; Telegram, Discord, webhook &amp; email (SMS &amp; push soon).
               </p>
             </li>
             <li className="bg-ds-panel border border-solid border-ds-border rounded-[14px] p-6 transition-all duration-200 hover:-translate-y-[3px] hover:border-ds-border-on hover:shadow-[0_18px_40px_rgba(0,0,0,0.4)]">
@@ -295,7 +295,7 @@ export default function LandingPage() {
                   <span className="text-ds-green select-none">▸</span> 20 contracts
                 </li>
                 <li className="py-1.5 text-ds-text-2 text-sm flex gap-2.25 items-center border-b border-solid border-[rgba(255,255,255,0.03)] last:border-b-0">
-                  <span className="text-ds-green select-none">▸</span> Telegram &amp; webhooks today — SMS, email &amp; push soon
+                  <span className="text-ds-green select-none">▸</span> Telegram, Discord, webhooks &amp; email today — SMS &amp; push soon
                 </li>
                 <li className="py-1.5 text-ds-text-2 text-sm flex gap-2.25 items-center border-b border-solid border-[rgba(255,255,255,0.03)] last:border-b-0">
                   <span className="text-ds-green select-none">▸</span> 90-day history

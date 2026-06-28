@@ -64,6 +64,37 @@ export async function sendDiscord(webhookUrl: string, content: string): Promise<
   }
 }
 
+// ── Email (Resend HTTP API — no SDK needed) ─────────────────────────────────────
+
+const RESEND_API_KEY   = process.env.RESEND_API_KEY;
+const ALERT_EMAIL_FROM = process.env.ALERT_EMAIL_FROM ?? 'Kryndel Alerts <alerts@kryndel.dev>';
+
+export async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+  if (!RESEND_API_KEY) {
+    console.warn('[dispatcher] RESEND_API_KEY not set — skipping email');
+    return;
+  }
+  const res = await fetch('https://api.resend.com/emails', {
+    method:  'POST',
+    headers: {
+      Authorization:  `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ from: ALERT_EMAIL_FROM, to, subject, html }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    console.error(`[dispatcher] Resend email error ${res.status}: ${body}`);
+  }
+}
+
+/** Escape on-chain (attacker-controlled) strings before embedding in email HTML. */
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] ?? c),
+  );
+}
+
 // ── Format helpers ────────────────────────────────────────────────────────────
 
 function formatActivity(activity: ContractActivity, contract: string): string {
@@ -80,6 +111,33 @@ function formatActivity(activity: ContractActivity, contract: string): string {
     ? `\n🔗 Tx: \`${escapeMarkdownV2(activity.txHash.slice(0, 16))}…\``
     : '';
   return `🔔 *Kryndel Alert*\n📄 Contrato: \`${addr}…\`\n📞 Call: *${txType}*${hash}`;
+}
+
+/** Build a subject + HTML body for an email alert. On-chain strings are escaped. */
+function formatActivityEmail(
+  activity: ContractActivity,
+  contract: string,
+): { subject: string; html: string } {
+  const rawName = activity.kind === 'event' ? (activity.name ?? 'Event') : (activity.txType ?? 'Call');
+  const name    = escapeHtml(rawName);
+  const addr    = escapeHtml(contract.slice(0, 12));
+  const txHash  = activity.txHash ?? '';
+  const txShort = txHash ? escapeHtml(`${txHash.slice(0, 12)}…${txHash.slice(-6)}`) : '';
+  const txLink  = txHash ? `https://kryndel.dev/decode/${encodeURIComponent(txHash)}` : '';
+  const subject = `Kryndel alert: ${rawName} on ${contract.slice(0, 10)}…`;
+
+  const html = `
+  <div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#111;">
+    <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#16a34a;font-weight:700;">Kryndel Alert</div>
+    <h1 style="font-size:22px;margin:8px 0 16px;color:#111;">${name}</h1>
+    <table style="width:100%;font-size:14px;border-collapse:collapse;">
+      <tr><td style="color:#666;padding:6px 0;">Contract</td><td style="font-family:monospace;text-align:right;color:#111;">${addr}…</td></tr>
+      ${txShort ? `<tr><td style="color:#666;padding:6px 0;">Tx</td><td style="font-family:monospace;text-align:right;color:#111;">${txShort}</td></tr>` : ''}
+    </table>
+    ${txLink ? `<a href="${txLink}" style="display:inline-block;margin-top:18px;background:#16a34a;color:#fff;text-decoration:none;padding:11px 20px;border-radius:6px;font-size:14px;font-weight:600;">View decoded tx →</a>` : ''}
+    <p style="font-size:12px;color:#999;margin-top:28px;line-height:1.5;">You're receiving this because you set a Kryndel alert on this contract. Manage your alerts at <a href="https://kryndel.dev/dashboard/rules" style="color:#16a34a;">kryndel.dev</a>.</p>
+  </div>`;
+  return { subject, html };
 }
 
 // ── Arg filter matching ──────────────────────────────────────────────────────
@@ -181,7 +239,8 @@ export async function dispatch(
             break;
           }
           case 'email': {
-            console.log(`[dispatcher] email channel not yet implemented for rule ${rule._id}`);
+            const { subject, html } = formatActivityEmail(activity, contract);
+            await sendEmail(rule.target, subject, html);
             break;
           }
           default:
