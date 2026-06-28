@@ -362,7 +362,7 @@ export function RulesClient({
       cell: ({ row }) => {
         const chan = row.original.channel;
         const colorMap: Record<string, string> = {
-          telegram: 'text-ds-green border-ds-green/30 bg-ds-green/5',
+          telegram: 'text-ds-green border-ds-green/30 bg-[rgba(43,217,111,0.08)]',
           discord: 'text-indigo-400 border-indigo-400/30 bg-indigo-400/5',
           slack: 'text-pink-400 border-pink-400/30 bg-pink-400/5',
           webhook: 'text-ds-amber border-ds-amber/30 bg-ds-amber/5',
@@ -657,7 +657,7 @@ export function RulesClient({
                       onClick={() => setTriggerType('event')}
                       className={`p-3.5 border border-solid rounded-lg text-left transition-all cursor-pointer flex items-start gap-3.5 outline-none ${
                         triggerType === 'event'
-                          ? 'border-ds-green text-ds-green bg-ds-green/5'
+                          ? 'border-ds-green text-ds-green bg-[rgba(43,217,111,0.08)]'
                           : 'border-ds-border text-ds-text-2 bg-transparent hover:border-ds-text-3'
                       }`}
                     >
@@ -675,7 +675,7 @@ export function RulesClient({
                       onClick={() => setTriggerType('function')}
                       className={`p-3.5 border border-solid rounded-lg text-left transition-all cursor-pointer flex items-start gap-3.5 outline-none ${
                         triggerType === 'function'
-                          ? 'border-ds-green text-ds-green bg-ds-green/5'
+                          ? 'border-ds-green text-ds-green bg-[rgba(43,217,111,0.08)]'
                           : 'border-ds-border text-ds-text-2 bg-transparent hover:border-ds-text-3'
                       }`}
                     >
@@ -693,7 +693,7 @@ export function RulesClient({
                       onClick={() => setTriggerType('failed')}
                       className={`p-3.5 border border-solid rounded-lg text-left transition-all cursor-pointer flex items-start gap-3.5 outline-none ${
                         triggerType === 'failed'
-                          ? 'border-ds-green text-ds-green bg-ds-green/5'
+                          ? 'border-ds-green text-ds-green bg-[rgba(43,217,111,0.08)]'
                           : 'border-ds-border text-ds-text-2 bg-transparent hover:border-ds-text-3'
                       }`}
                     >
@@ -711,7 +711,7 @@ export function RulesClient({
                       onClick={() => setTriggerType('state')}
                       className={`p-3.5 border border-solid rounded-lg text-left transition-all cursor-pointer flex items-start gap-3.5 outline-none ${
                         triggerType === 'state'
-                          ? 'border-ds-green text-ds-green bg-ds-green/5'
+                          ? 'border-ds-green text-ds-green bg-[rgba(43,217,111,0.08)]'
                           : 'border-ds-border text-ds-text-2 bg-transparent hover:border-ds-text-3'
                       }`}
                     >
@@ -928,7 +928,7 @@ export function RulesClient({
                             }}
                             className={`p-2.5 border border-solid rounded text-left flex justify-between items-center text-[10px] font-ds-mono font-bold uppercase transition-all outline-none ${
                               active
-                                ? 'border-ds-green text-ds-green bg-ds-green/5 cursor-pointer'
+                                ? 'border-ds-green text-ds-green bg-[rgba(43,217,111,0.08)] cursor-pointer'
                                 : allowed
                                 ? 'border-ds-border text-ds-text-2 bg-transparent hover:border-ds-text-3 cursor-pointer'
                                 : 'border-ds-border/40 text-ds-text-3 bg-ds-shell/50 cursor-not-allowed opacity-50'
