@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: 'Kryndel pricing: Free plan forever, Pro at $19.99/month. No card required to start.',
   openGraph: {
     title: 'Kryndel Pricing — Free & Pro plans',
-    description: 'Start free with 3 contracts. Upgrade to Pro for 20 contracts, all alert channels, 90-day history, REST API and SDK.',
+    description: 'Start free with 3 contracts. Upgrade to Pro for 20 contracts, all alert channels, 90-day history, REST API and SDK — plus XRPL token-issuer security monitoring (Sentinel).',
     url: 'https://kryndel.dev/pricing',
     type: 'website',
   },
@@ -24,6 +24,10 @@ const faqItems = [
   {
     q: 'What counts as a "contract watched"?',
     a: 'Each unique contract address you add to your dashboard counts as one slot. You can swap them out any time.',
+  },
+  {
+    q: 'What is Sentinel?',
+    a: 'Sentinel watches XRPL token-issuer accounts for critical security changes — regular-key or signer changes, freeze/clawback toggles, blackhole status and supply jumps — with instant alerts and a shareable weekly report. Free covers 1 issuer; Pro covers 25.',
   },
   {
     q: 'What alert channels does Pro include?',
@@ -96,6 +100,7 @@ export default async function PricingPage() {
               <ul className="flex-grow space-y-3 mb-8 list-none p-0">
                 {[
                   '3 contracts watched',
+                  '1 token issuer (Sentinel)',
                   'Telegram alerts',
                   '7-day event history',
                   'Public explorer',
@@ -132,6 +137,7 @@ export default async function PricingPage() {
               <ul className="flex-grow space-y-3 mb-8 list-none p-0">
                 {[
                   '20 contracts watched',
+                  '25 token issuers (Sentinel)',
                   'Telegram & webhooks',
                   '90-day event history',
                   'REST API + SDK',

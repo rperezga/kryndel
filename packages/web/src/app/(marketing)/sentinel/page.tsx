@@ -109,6 +109,10 @@ export default function SentinelPage() {
           re-enabled, a regular key is set, freeze or clawback is toggled, or supply jumps — straight
           to Telegram, Discord or a webhook.
         </p>
+        <p className="font-ds-sans text-sm text-ds-text-3 max-w-xl mx-auto m-0 leading-relaxed">
+          Plus a <span className="text-ds-text-2">shareable weekly report</span> of every issuer’s
+          security &amp; health — ideal for keeping your community in the loop.
+        </p>
         <div className="pt-2 flex flex-wrap justify-center gap-3">
           <Link
             href="/login"
