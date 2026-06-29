@@ -54,15 +54,32 @@ export default async function SentinelReportPage({ params }: Props) {
 
   const db = await getDb();
 
-  // Snapshot: prefer the worker's cached one; fall back to a live fetch.
+  // Snapshot: prefer the worker's cached one; otherwise fetch live. The public
+  // XRPL cluster can transiently return "not found", so retry once and fall back
+  // to a stale cache rather than showing a false negative on a shared link.
   let snapshot: IssuerSnapshot | null = null;
   const cached = await db.collection('sentinel_snapshots').findOne({ address: addr });
-  if (cached?.snapshot) snapshot = serialize(cached.snapshot) as IssuerSnapshot;
+  if (cached?.snapshot) {
+    const c = serialize(cached.snapshot) as IssuerSnapshot;
+    if (c.exists) snapshot = c;
+  }
   if (!snapshot) {
     try {
-      snapshot = await fetchIssuerSnapshot(addr, { endpoint: XRPL_RPC_URL, timeoutMs: 12_000 });
+      let live = await fetchIssuerSnapshot(addr, { endpoint: XRPL_RPC_URL, timeoutMs: 12_000 });
+      if (!live.exists) live = await fetchIssuerSnapshot(addr, { endpoint: XRPL_RPC_URL, timeoutMs: 12_000 });
+      if (live.exists) {
+        snapshot = live;
+        await db.collection('sentinel_snapshots').updateOne(
+          { address: addr },
+          { $set: { address: addr, snapshot: serialize(live), cachedAt: new Date() } },
+          { upsert: true },
+        );
+      } else {
+        snapshot = live;
+      }
     } catch {
-      return <ErrorState address={addr} kind="rpc" />;
+      if (cached?.snapshot) snapshot = serialize(cached.snapshot) as IssuerSnapshot;
+      else return <ErrorState address={addr} kind="rpc" />;
     }
   }
   if (!snapshot.exists) return <ErrorState address={addr} kind="notfound" />;
