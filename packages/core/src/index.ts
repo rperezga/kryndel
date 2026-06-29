@@ -9,4 +9,5 @@ export * from './subscriber.js';
 export * from './alerts.js';
 export * from './tracer.js';
 export * from './sentinel.js';
+export * from './sentinel-report.js';
 export * from './ssrf.js';

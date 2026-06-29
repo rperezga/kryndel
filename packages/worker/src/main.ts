@@ -15,6 +15,7 @@ import { closeDb, getDb }    from './db.js';
 import { processRetries }    from './webhook-deliverer.js';
 import { startSentinelLoop } from './sentinel-loop.js';
 import { startHeartbeatLoop, getHeartbeatState } from './heartbeat.js';
+import { startSentinelReportLoop } from './sentinel-report-job.js';
 
 const PORT = parseInt(process.env.PORT ?? '8080', 10);
 
@@ -45,6 +46,10 @@ const stopSentinel = startSentinelLoop();
 
 const stopHeartbeat = startHeartbeatLoop(() => pool.size);
 
+// ── Sentinel weekly report job (hourly check; emails each issuer owner every 7d) ─
+
+const stopSentinelReport = startSentinelReportLoop();
+
 // ── Webhook retry loop (60s interval) ─────────────────────────────────────────
 
 let _retryLoopActive = true;
@@ -69,7 +74,7 @@ const server = createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/healthz') {
     const body = JSON.stringify({
       status:     'ok',
-      build:      'heartbeat-v2',
+      build:      'sentinel-report-v1',
       uptime:     process.uptime(),
       watchers:   pool.size,
       activeKeys: pool.activeKeys,
@@ -96,6 +101,7 @@ async function shutdown(signal: string): Promise<void> {
   stopReconcile();
   stopSentinel();
   stopHeartbeat();
+  stopSentinelReport();
   await pool.stopAll();
   await closeDb();
   server.close(() => {

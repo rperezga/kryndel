@@ -28,3 +28,7 @@ export { createEvmDecoder, ERC20_ABI } from './decoder.js';
 // Sentinel — XRPL (L1) issuer security & health. Pure fetch-based JSON-RPC,
 // safe server-side. Used by snapshot pages and the worker issuer watcher.
 export * from './sentinel.js';
+
+// Weekly report generator — pure, web-safe. Used by the public report page
+// and the worker's weekly email digest.
+export * from './sentinel-report.js';
