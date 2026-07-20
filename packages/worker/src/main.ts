@@ -19,6 +19,13 @@ import { startSentinelReportLoop } from './sentinel-report-job.js';
 
 const PORT = parseInt(process.env.PORT ?? '8080', 10);
 
+// Seguridad: escuchar SOLO en loopback por defecto. El worker es OUTBOUND (Mongo Atlas,
+// RPC/WS de XRPL, alertas Telegram/Resend); su único endpoint inbound es /healthz, que solo
+// usaba el healthcheck de Railway. En el Kali (pm2, sin túnel) nadie más debe alcanzar el
+// puerto: bindear a *:PORT lo exponía en todas las interfaces (incl. la IPv6 pública del host).
+// Abrirlo tiene que ser un HOST=0.0.0.0 deliberado.
+const HOST = process.env.HOST ?? '127.0.0.1';
+
 // ── Required env check ────────────────────────────────────────────────────────
 
 const REQUIRED_ENV = ['MONGODB_URI'] as const;
@@ -89,8 +96,8 @@ const server = createServer((req, res) => {
   res.end('not found');
 });
 
-server.listen(PORT, () => {
-  console.log(`[worker] /healthz listening on :${PORT}`);
+server.listen(PORT, HOST, () => {
+  console.log(`[worker] /healthz listening on ${HOST}:${PORT}`);
 });
 
 // ── Graceful shutdown ─────────────────────────────────────────────────────────
