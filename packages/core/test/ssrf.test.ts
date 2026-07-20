@@ -9,24 +9,24 @@ import { describe, it, expect, vi } from 'vitest';
 // Mock node:dns/promises BEFORE importing ssrf.ts. Vitest hoists vi.mock.
 vi.mock('node:dns/promises', () => ({
   lookup: vi.fn(async (host: string) => {
-    const TABLE: Record<string, Array<{ address: string; family: number }>> = {
+    const TABLE: Record<string, Array<{ address: string; family: number }> | null> = {
       'evil-private.example':     [{ address: '10.0.0.5',         family: 4 }],
       'evil-metadata.example':    [{ address: '169.254.169.254',  family: 4 }],
       'evil-rebind.example':      [{ address: '127.0.0.1',        family: 4 }],
       'hooks.slack.com':          [{ address: '52.85.151.10',     family: 4 }],
       'discord.com':              [{ address: '162.159.135.232',  family: 4 }],
       'api.kryndel.xyz':          [{ address: '76.76.21.21',      family: 4 }],
-      'dns-error.example':        null as any, // sentinel → throw below
+      'dns-error.example':        null, // sentinel → throw below
     };
     const entry = TABLE[host];
     if (entry === undefined) {
       // No record — simulate ENOTFOUND
-      const err: any = new Error('getaddrinfo ENOTFOUND ' + host);
+      const err = new Error('getaddrinfo ENOTFOUND ' + host) as Error & { code?: string };
       err.code = 'ENOTFOUND';
       throw err;
     }
     if (entry === null) {
-      const err: any = new Error('getaddrinfo ESERVFAIL ' + host);
+      const err = new Error('getaddrinfo ESERVFAIL ' + host) as Error & { code?: string };
       err.code = 'ESERVFAIL';
       throw err;
     }

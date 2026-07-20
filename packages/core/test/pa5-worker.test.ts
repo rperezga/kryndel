@@ -3,7 +3,7 @@
  *
  * Tests pure logic without hitting MongoDB or external services.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 // ── WatcherPool state management (pure logic) ─────────────────────────────────
 

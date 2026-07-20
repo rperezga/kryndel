@@ -18,7 +18,7 @@ vi.mock('node:dns/promises', () => ({
   lookup: vi.fn(async (host: string) => {
     if (host === 'discord.com') return [{ address: '162.159.135.232', family: 4 }];
     if (host === 'evil.discord.com') return [{ address: '10.0.0.1',  family: 4 }];
-    const err: any = new Error('ENOTFOUND ' + host);
+    const err = new Error('ENOTFOUND ' + host) as Error & { code?: string };
     err.code = 'ENOTFOUND';
     throw err;
   }),
@@ -30,27 +30,27 @@ const userId      = new ObjectId();
 const userPro     = new ObjectId();
 const contractAddr = '0xabcdef1234567890abcdef1234567890abcdef12';
 
-let rulesStore:     any[] = [];
-let contractsStore: any[] = [{ userId, address: contractAddr, surface: 'evm' }];
+let rulesStore:     Record<string, unknown>[] = [];
+let contractsStore: Record<string, unknown>[] = [{ userId, address: contractAddr, surface: 'evm' }];
 
 function makeDb() {
   return {
     collection(name: string) {
       if (name === 'alert_rules') {
         return {
-          insertOne: vi.fn(async (doc: any) => {
+          insertOne: vi.fn(async (doc: Record<string, unknown>) => {
             const _id = new ObjectId();
             rulesStore.push({ _id, ...doc });
             return { insertedId: _id };
           }),
-          countDocuments: vi.fn(async (q: any) =>
+          countDocuments: vi.fn(async (q: Record<string, unknown>) =>
             rulesStore.filter(
               (r) =>
                 String(r.userId) === String(q.userId) &&
                 r.contractAddress === q.contractAddress,
             ).length,
           ),
-          deleteOne: vi.fn(async (q: any) => {
+          deleteOne: vi.fn(async (q: Record<string, unknown>) => {
             const before = rulesStore.length;
             rulesStore = rulesStore.filter((r) => String(r._id) !== String(q._id));
             return { deletedCount: before - rulesStore.length };
@@ -59,7 +59,7 @@ function makeDb() {
       }
       if (name === 'contracts') {
         return {
-          findOne: vi.fn(async (q: any) =>
+          findOne: vi.fn(async (q: Record<string, unknown>) =>
             contractsStore.find(
               (c) =>
                 String(c.userId) === String(q.userId) &&
@@ -92,7 +92,7 @@ vi.mock('@/auth', () => ({
 
 vi.mock('@/lib/models/index', () => ({
   usersCollection: vi.fn(async () => ({
-    findOne: vi.fn(async (q: any) => {
+    findOne: vi.fn(async () => {
       if (!sessionState.user) return null;
       const s = sessionState.user;
       return {
