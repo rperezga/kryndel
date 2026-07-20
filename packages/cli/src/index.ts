@@ -54,7 +54,7 @@ program
         process.exit(1);
       }
 
-      const { createNativeWatcher, createNativeDecoder, createMongoIndexer, createPipeline } = await import('@kryndel/core');
+      const { createNativeWatcher, createNativeDecoder, createMongoIndexer, createPipeline } = await import('@kryndel/core/full');
       console.log(pc.cyan(`watch ${address ?? '(todos)'} --net alphanet`), pc.dim('→'), endpoint);
 
       let seen = 0;
@@ -102,7 +102,7 @@ program
         process.exit(1);
       }
 
-      const { createEvmWatcher, createEvmDecoder, createMongoIndexer, createPipeline } = await import('@kryndel/core');
+      const { createEvmWatcher, createEvmDecoder, createMongoIndexer, createPipeline } = await import('@kryndel/core/full');
       // A2.9: leer contrato demo desde env; fallback al hardcoded.
       const demo = process.env.EVM_DEMO_CONTRACT ?? '0x7C21a90E3eCD3215d16c3BBe76a491f8f792d4Bf';
       const target = address ?? (useIndex ? demo : undefined);
@@ -166,7 +166,7 @@ program
   .description('Decode one EVM transaction into a structured trace')
   .action(async (txHash: string, opts: { net: string; json?: boolean }) => {
 
-    const { traceEvmTx, traceNativeTx } = await import('@kryndel/core');
+    const { traceEvmTx, traceNativeTx } = await import('@kryndel/core/full');
 
     // ── AlphaNet (XLS-0101 native contracts) ────────────────────────────────
     if (opts.net === 'alphanet' || opts.net === 'native') {
@@ -264,7 +264,7 @@ program
     const {
       createEvmDecoder, createMongoIndexer, createPipeline,
       createSubscriber, createDispatcher,
-    } = await import('@kryndel/core');
+    } = await import('@kryndel/core/full');
 
     const contractRef = { surface: 'evm' as const, address };
     const decoder    = createEvmDecoder(contractRef);
