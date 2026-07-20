@@ -9,6 +9,9 @@ export default defineConfig({
     alias: {
       // Mirror Next.js path alias so tests can import @/lib/... and @/auth etc.
       '@': resolve(__dirname, 'packages/web/src'),
+      // @kryndel/core → its web-safe source, so tests resolve it without a built dist/.
+      // (Only the addRule action imports it; prod uses the same 'web'/webpack export.)
+      '@kryndel/core': resolve(__dirname, 'packages/core/src/web.ts'),
     },
   },
   test: {
