@@ -16,12 +16,12 @@ import { ObjectId } from 'mongodb';
 // ── Fake Stripe SDK ─────────────────────────────────────────────────────────
 
 const { fakeStripe, stripeCalls, signatureBehaviour } = vi.hoisted(() => {
-  const stripeCalls: any[] = [];
-  const signatureBehaviour: { valid: boolean; event?: any } = { valid: true };
+  const stripeCalls: Record<string, unknown>[] = [];
+  const signatureBehaviour: { valid: boolean; event?: unknown } = { valid: true };
   const fakeStripe = {
     checkout: {
       sessions: {
-        create: vi.fn(async (args: any) => {
+        create: vi.fn(async (args: Record<string, unknown>) => {
           stripeCalls.push({ kind: 'checkout', args });
           return { id: 'cs_test_123', url: 'https://checkout.stripe.com/c/cs_test_123' };
         }),
@@ -29,7 +29,7 @@ const { fakeStripe, stripeCalls, signatureBehaviour } = vi.hoisted(() => {
     },
     billingPortal: {
       sessions: {
-        create: vi.fn(async (args: any) => {
+        create: vi.fn(async (args: Record<string, unknown>) => {
           stripeCalls.push({ kind: 'portal', args });
           return { id: 'bps_test_1', url: 'https://billing.stripe.com/p/session/bps_test_1' };
         }),
@@ -39,7 +39,7 @@ const { fakeStripe, stripeCalls, signatureBehaviour } = vi.hoisted(() => {
       constructEvent: vi.fn((body: string, sig: string, secret: string) => {
         stripeCalls.push({ kind: 'constructEvent', body: body.length, sig, secret });
         if (!signatureBehaviour.valid) {
-          const err: any = new Error('No signatures found matching the expected signature for payload.');
+          const err = new Error('No signatures found matching the expected signature for payload.') as Error & { type?: string };
           err.type = 'StripeSignatureVerificationError';
           throw err;
         }
@@ -60,12 +60,12 @@ vi.mock('@/lib/stripe', () => ({
 const userIdFree = new ObjectId();
 const userIdPro  = new ObjectId();
 
-let usersStore:        any[] = [];
-let stripeEventsStore: any[] = [];
+let usersStore:        Record<string, unknown>[] = [];
+let stripeEventsStore: Record<string, unknown>[] = [];
 
-function matches(doc: any, q: any): boolean {
+function matches(doc: Record<string, unknown>, q: Record<string, unknown>): boolean {
   for (const [k, v] of Object.entries(q)) {
-    const dv = (doc as any)[k];
+    const dv = doc[k];
     if (String(dv) !== String(v)) return false;
   }
   return true;
@@ -76,12 +76,12 @@ function makeDb() {
     collection(name: string) {
       const isUsers = name === 'users';
       const getStore = () => isUsers ? usersStore : stripeEventsStore;
-      const setStore = (next: any[]) => {
+      const setStore = (next: Record<string, unknown>[]) => {
         if (isUsers) usersStore = next; else stripeEventsStore = next;
       };
       return {
-        findOne: vi.fn(async (q: any) => getStore().find((d) => matches(d, q)) ?? null),
-        updateOne: vi.fn(async (q: any, update: any) => {
+        findOne: vi.fn(async (q: Record<string, unknown>) => getStore().find((d) => matches(d, q)) ?? null),
+        updateOne: vi.fn(async (q: Record<string, unknown>, update: Record<string, unknown>) => {
           const idx = getStore().findIndex((d) => matches(d, q));
           if (idx < 0) return { matchedCount: 0, modifiedCount: 0 };
           const doc = { ...getStore()[idx] };
@@ -94,7 +94,7 @@ function makeDb() {
           setStore([...next]);
           return { matchedCount: 1, modifiedCount: 1 };
         }),
-        insertOne: vi.fn(async (doc: any) => {
+        insertOne: vi.fn(async (doc: Record<string, unknown>) => {
           if (isUsers) {
             const _id = doc._id ?? new ObjectId();
             usersStore.push({ ...doc, _id });
@@ -102,7 +102,7 @@ function makeDb() {
           }
           // stripe_events: _id is the Stripe event id; enforce uniqueness.
           if (getStore().some((d) => String(d._id) === String(doc._id))) {
-            const err: any = new Error('E11000 duplicate key');
+            const err = new Error('E11000 duplicate key') as Error & { code?: number };
             err.code = 11000;
             throw err;
           }
@@ -135,7 +135,7 @@ vi.mock('@/auth', () => ({
 }));
 
 vi.mock('@/lib/models/index', async () => {
-  const real = await vi.importActual<any>('@/lib/models/index');
+  const real = await vi.importActual<typeof import('@/lib/models/index')>('@/lib/models/index');
   return {
     ...real,
     usersCollection: vi.fn(async () => ({
@@ -172,7 +172,7 @@ beforeEach(() => {
 function mkNextRequest(opts: {
   body?: string;
   headers?: Record<string, string>;
-}): any {
+}) {
   const body = opts.body ?? '';
   const headers = new Headers(opts.headers ?? {});
   return {

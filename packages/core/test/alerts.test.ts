@@ -9,7 +9,7 @@ vi.mock('node:dns/promises', () => ({
     };
     const entry = t[host];
     if (!entry) {
-      const err: any = new Error('ENOTFOUND ' + host);
+      const err = new Error('ENOTFOUND ' + host) as Error & { code?: string };
       err.code = 'ENOTFOUND';
       throw err;
     }

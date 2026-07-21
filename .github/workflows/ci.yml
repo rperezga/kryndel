@@ -12,9 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # v4 lee la versión de "packageManager" en package.json (pnpm@11.5.2). Especificar
+      # también "version:" aquí hacía fallar el CI (ERR_PNPM_BAD_PM_VERSION por doble versión).
       - uses: pnpm/action-setup@v4
-        with:
-          version: 11
 
       - uses: actions/setup-node@v4
         with:
@@ -30,3 +30,8 @@ jobs:
         run: pnpm --filter @kryndel/core build && pnpm --filter @kryndel/web build
         env:
           SKIP_ENV_VALIDATION: "1"
+          # Placeholders so module-load guards (auth.ts builds a MongoClient eagerly in
+          # production; NextAuth init) don't throw during `next build` page-data collection.
+          # Real values are injected by Vercel at deploy; nothing here connects at build time.
+          MONGODB_URI: "mongodb://127.0.0.1:27017/kryndel_ci_build"
+          AUTH_SECRET: "ci_build_placeholder_secret_not_used_at_runtime"

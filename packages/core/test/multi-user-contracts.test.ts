@@ -19,11 +19,11 @@ const userA = new ObjectId();
 const userB = new ObjectId();
 const contractAddr = '0xe4c3ee653d7861cf236b2bea4bdb2a261231ea67';
 
-let contractsStore: any[] = [];
+let contractsStore: Record<string, unknown>[] = [];
 
-function matches(doc: any, q: any): boolean {
+function matches(doc: Record<string, unknown>, q: Record<string, unknown>): boolean {
   for (const [k, v] of Object.entries(q)) {
-    const dv = (doc as any)[k];
+    const dv = doc[k];
     if (k === 'address' || k === 'contractAddress') {
       if (String(dv).toLowerCase() !== String(v).toLowerCase()) return false;
     } else if (String(dv) !== String(v)) {
@@ -39,14 +39,14 @@ function makeDb() {
   return {
     collection(_name: string) {
       return {
-        insertOne: vi.fn(async (doc: any) => {
+        insertOne: vi.fn(async (doc: Record<string, unknown>) => {
           const dup = contractsStore.find((d) =>
             String(d.userId)  === String(doc.userId) &&
             d.address         === doc.address &&
             d.surface         === doc.surface,
           );
           if (dup) {
-            const e: any = new Error('E11000 duplicate key error collection: kryndel.contracts');
+            const e = new Error('E11000 duplicate key error collection: kryndel.contracts') as Error & { code?: number };
             e.code = 11000;
             throw e;
           }
@@ -54,18 +54,18 @@ function makeDb() {
           contractsStore.push({ _id, ...doc });
           return { insertedId: _id };
         }),
-        countDocuments: vi.fn(async (q: any) =>
+        countDocuments: vi.fn(async (q: Record<string, unknown>) =>
           contractsStore.filter((d) => matches(d, q)).length,
         ),
-        deleteOne: vi.fn(async (q: any) => {
+        deleteOne: vi.fn(async (q: Record<string, unknown>) => {
           const before = contractsStore.length;
           contractsStore = contractsStore.filter((d) => String(d._id) !== String(q._id));
           return { deletedCount: before - contractsStore.length };
         }),
-        findOne: vi.fn(async (q: any) =>
+        findOne: vi.fn(async (q: Record<string, unknown>) =>
           contractsStore.find((d) => matches(d, q)) ?? null,
         ),
-        find: vi.fn((q: any) => ({
+        find: vi.fn((q: Record<string, unknown>) => ({
           sort: () => ({
             toArray: async () => contractsStore.filter((d) => matches(d, q)),
           }),
@@ -94,7 +94,7 @@ vi.mock('@/auth', () => ({
 }));
 
 vi.mock('@/lib/models/index', async () => {
-  const real = await vi.importActual<any>('@/lib/models/index');
+  const real = await vi.importActual<typeof import('@/lib/models/index')>('@/lib/models/index');
   return {
     ...real,
     usersCollection: vi.fn(async () => ({

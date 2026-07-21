@@ -22,12 +22,12 @@ import { ObjectId } from 'mongodb';
 const userId       = new ObjectId();
 const contractAddr = '0xe4c3ee653d7861cf236b2bea4bdb2a261231ea67';
 
-let contractsStore: any[] = [];
-let rulesStore:     any[] = [];
+let contractsStore: Record<string, unknown>[] = [];
+let rulesStore:     Record<string, unknown>[] = [];
 
-function matches(doc: any, q: any): boolean {
+function matches(doc: Record<string, unknown>, q: Record<string, unknown>): boolean {
   for (const [k, v] of Object.entries(q)) {
-    const dv = (doc as any)[k];
+    const dv = doc[k];
     if (k === 'address' || k === 'contractAddress') {
       if (String(dv).toLowerCase() !== String(v).toLowerCase()) return false;
     } else if (String(dv) !== String(v)) {
@@ -42,23 +42,23 @@ function makeDb() {
     collection(name: string) {
       const isContracts = name === 'contracts';
       const getStore = () => isContracts ? contractsStore : rulesStore;
-      const setStore = (next: any[]) => {
+      const setStore = (next: Record<string, unknown>[]) => {
         if (isContracts) contractsStore = next; else rulesStore = next;
       };
       return {
-        insertOne: vi.fn(async (doc: any) => {
+        insertOne: vi.fn(async (doc: Record<string, unknown>) => {
           const _id = new ObjectId();
           getStore().push({ _id, ...doc });
           return { insertedId: _id };
         }),
-        countDocuments: vi.fn(async (q: any) => getStore().filter((d) => matches(d, q)).length),
-        deleteOne: vi.fn(async (q: any) => {
+        countDocuments: vi.fn(async (q: Record<string, unknown>) => getStore().filter((d) => matches(d, q)).length),
+        deleteOne: vi.fn(async (q: Record<string, unknown>) => {
           const before = getStore().length;
           setStore(getStore().filter((d) => String(d._id) !== String(q._id)));
           return { deletedCount: before - getStore().length };
         }),
-        findOne: vi.fn(async (q: any) => getStore().find((d) => matches(d, q)) ?? null),
-        find:    vi.fn((q: any) => ({
+        findOne: vi.fn(async (q: Record<string, unknown>) => getStore().find((d) => matches(d, q)) ?? null),
+        find:    vi.fn((q: Record<string, unknown>) => ({
           sort: () => ({
             toArray: async () => getStore().filter((d) => matches(d, q)),
           }),
@@ -87,7 +87,7 @@ vi.mock('@/auth', () => ({
 }));
 
 vi.mock('@/lib/models/index', async () => {
-  const real = await vi.importActual<any>('@/lib/models/index');
+  const real = await vi.importActual<typeof import('@/lib/models/index')>('@/lib/models/index');
   return {
     ...real,
     usersCollection: vi.fn(async () => ({
