@@ -8,12 +8,13 @@
  * PB-core: after dispatching alerts, also triggers deliverWebhooks for
  * outbound signed delivery to user-registered webhook endpoints.
  */
-import { createEvmWatcher, createNativeWatcher, createEvmDecoder } from '@kryndel/core/full';
+import { createNativeWatcher, createEvmDecoder } from '@kryndel/core/full';
 import type { Watcher, ContractActivity } from '@kryndel/core/full';
 import type { WContract, WAlertRule } from './types.js';
 import { dispatch }          from './dispatcher.js';
 import { deliverWebhooks }   from './webhook-deliverer.js';
 import { getDb }             from './db.js';
+import { SharedEvmPoller }   from './evm-rpc.js';
 
 /**
  * F1: Decode an EVM ContractActivity using the cascade decoder.
@@ -111,8 +112,23 @@ interface PoolEntry {
   rules:    WAlertRule[];
 }
 
+interface WorkerEvmPoller {
+  createWatcher(address: string): Watcher;
+  stop(): void;
+}
+
 export class WatcherPool {
   private entries = new Map<string, PoolEntry>();
+  private readonly evmPoller: WorkerEvmPoller;
+
+  constructor(evmPoller?: WorkerEvmPoller) {
+    const endpoint = process.env.EVM_RPC_URL ?? 'https://rpc.xrplevm.org';
+    this.evmPoller = evmPoller ?? new SharedEvmPoller(endpoint, {
+      onStatus: (status, detail) => console.log(
+        `[pool] evm:shared -> ${status}${detail ? ` ${detail}` : ''}`,
+      ),
+    });
+  }
 
   /** Current number of active watchers. */
   get size(): number { return this.entries.size; }
@@ -208,23 +224,23 @@ export class WatcherPool {
       [...this.entries.values()].map((e) => e.watcher.stop()),
     );
     this.entries.clear();
+    this.evmPoller.stop();
     console.log('[pool] all watchers stopped');
   }
 
   private createWatcher(contract: WContract, _rules: Map<string, WAlertRule[]>): Watcher {
-    const evmEndpoint    = process.env.EVM_RPC_URL    ?? 'https://rpc.xrplevm.org';
-    const nativeEndpoint = process.env.NATIVE_WS_URL  ?? 'wss://clio.xrpl-labs.com';
+    const nativeEndpoint = process.env.NATIVE_WS_URL ?? 'wss://clio.xrpl-labs.com';
 
     const opts = {
       surface:    contract.surface,
-      endpoint:   contract.surface === 'evm' ? evmEndpoint : nativeEndpoint,
+      endpoint:   nativeEndpoint,
       contract:   contract.address,
       onStatus:   (status: string, detail?: string) =>
         console.log(`[pool] ${contract.surface}:${contract.address.slice(0, 8)}... -> ${status}${detail ? ' ' + detail : ''}`),
     };
 
     return contract.surface === 'evm'
-      ? createEvmWatcher(opts)
+      ? this.evmPoller.createWatcher(contract.address)
       : createNativeWatcher(opts);
   }
 }
