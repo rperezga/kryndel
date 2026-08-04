@@ -18,6 +18,7 @@ import { startHeartbeatLoop, getHeartbeatState } from './heartbeat.js';
 import { startSentinelReportLoop } from './sentinel-report-job.js';
 
 const PORT = parseInt(process.env.PORT ?? '8080', 10);
+const WORKER_VERSION = '0.4.1';
 
 // Seguridad: escuchar SOLO en loopback por defecto. El worker es OUTBOUND (Mongo Atlas,
 // RPC/WS de XRPL, alertas Telegram/Resend); su único endpoint inbound es /healthz, que solo
@@ -81,7 +82,7 @@ const server = createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/healthz') {
     const body = JSON.stringify({
       status:     'ok',
-      build:      'sentinel-report-v1',
+      build:      `worker-v${WORKER_VERSION}`,
       uptime:     process.uptime(),
       watchers:   pool.size,
       activeKeys: pool.activeKeys,
@@ -122,4 +123,4 @@ async function shutdown(signal: string): Promise<void> {
 process.on('SIGTERM', () => void shutdown('SIGTERM'));
 process.on('SIGINT',  () => void shutdown('SIGINT'));
 
-console.log('[worker] started');
+console.log(`[worker] started v${WORKER_VERSION}`);
