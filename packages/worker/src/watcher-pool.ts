@@ -114,7 +114,7 @@ interface PoolEntry {
 
 interface WorkerEvmPoller {
   createWatcher(address: string): Watcher;
-  stop(): void;
+  stop(): void | Promise<void>;
 }
 
 export class WatcherPool {
@@ -224,7 +224,7 @@ export class WatcherPool {
       [...this.entries.values()].map((e) => e.watcher.stop()),
     );
     this.entries.clear();
-    this.evmPoller.stop();
+    await this.evmPoller.stop();
     console.log('[pool] all watchers stopped');
   }
 

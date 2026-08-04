@@ -66,6 +66,41 @@ describe('rpcRequest', () => {
     expect(result).toBe('0x2a');
     expect(retries).toEqual(['network']);
   });
+
+  it('does not expose an untrusted RPC error message', async () => {
+    const fetchFn = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      error: { code: -32_000, message: 'provider-secret-content' },
+    }), { status: 200 }));
+
+    await expect(rpcRequest('https://rpc.example', 'eth_getLogs', [], {
+      fetchFn: fetchFn as typeof fetch,
+    })).rejects.not.toThrow('provider-secret-content');
+  });
+
+  it('does not retry when the caller aborts an in-flight request', async () => {
+    const controller = new AbortController();
+    const fetchFn = vi.fn((_url: string | URL | Request, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          reject(new DOMException('aborted', 'AbortError'));
+        }, { once: true });
+      }));
+    const options = {
+      fetchFn: fetchFn as typeof fetch,
+      sleep: async () => {},
+      timeoutMs: 50,
+      signal: controller.signal,
+    } as Parameters<typeof rpcRequest>[3] & { signal: AbortSignal };
+
+    const request = rpcRequest('https://rpc.example', 'eth_blockNumber', [], options);
+    await Promise.resolve();
+    controller.abort();
+
+    await expect(request).rejects.toThrow('cancelled');
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('RpcRetryWarningAggregator', () => {
@@ -194,6 +229,39 @@ describe('SharedEvmPoller', () => {
     expect(blockRequests).toEqual(['0x62', '0x63', '0x64', '0x65']);
     expect(rpc.mock.calls.filter(([method]) => method === 'eth_getLogs')).toHaveLength(4);
     poller.stop();
+  });
+
+  it('waits for an in-flight async handler during shutdown', async () => {
+    const address = `0x${'a'.repeat(40)}`;
+    let releaseHandler: (() => void) | undefined;
+    let markHandlerStarted: (() => void) | undefined;
+    const handlerGate = new Promise<void>((resolve) => { releaseHandler = resolve; });
+    const handlerStarted = new Promise<void>((resolve) => { markHandlerStarted = resolve; });
+    const rpc = vi.fn(async (method: string) => {
+      if (method === 'eth_blockNumber') return '0x64';
+      if (method === 'eth_getBlockByNumber') return { hash: '0xblock' };
+      if (method === 'eth_getLogs') return [{ address, topics: [], logIndex: '0x0', blockNumber: '0x62' }];
+      throw new Error(`unexpected method ${method}`);
+    });
+    const poller = new SharedEvmPoller('https://rpc.example', {
+      request: rpc,
+      autoStart: false,
+    });
+    poller.subscribe(address, async () => {
+      markHandlerStarted?.();
+      await handlerGate;
+    });
+
+    const poll = poller.pollOnce();
+    await handlerStarted;
+    let stopResolved = false;
+    const stop = poller.stop().then(() => { stopResolved = true; });
+    await Promise.resolve();
+
+    expect(stopResolved).toBe(false);
+    releaseHandler?.();
+    await Promise.all([poll, stop]);
+    expect(stopResolved).toBe(true);
   });
 
   it('uses a 10 second base interval with plus or minus 20 percent jitter', () => {

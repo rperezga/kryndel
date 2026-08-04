@@ -74,6 +74,7 @@ interface RpcRequestDependencies {
   random?: () => number;
   onRetry?: (event: RpcRetryEvent) => void;
   timeoutMs?: number;
+  signal?: AbortSignal;
 }
 
 class RpcAttemptError extends Error {
@@ -100,8 +101,23 @@ function jitteredDelay(baseMs: number, random: () => number): number {
   return Math.max(0, Math.round(baseMs * factor));
 }
 
-async function defaultSleep(ms: number): Promise<void> {
-  await new Promise<void>((resolve) => setTimeout(resolve, ms));
+async function defaultSleep(ms: number, signal?: AbortSignal): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new Error('RPC request cancelled'));
+      return;
+    }
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    timer.unref?.();
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      reject(new Error('RPC request cancelled'));
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
 }
 
 async function requestOnce<T>(
@@ -110,8 +126,12 @@ async function requestOnce<T>(
   params: unknown[],
   fetchFn: typeof fetch,
   timeoutMs: number,
+  externalSignal?: AbortSignal,
 ): Promise<T> {
   const controller = new AbortController();
+  const abortFromCaller = (): void => controller.abort();
+  if (externalSignal?.aborted) controller.abort();
+  else externalSignal?.addEventListener('abort', abortFromCaller, { once: true });
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   timer.unref?.();
 
@@ -124,10 +144,14 @@ async function requestOnce<T>(
       signal: controller.signal,
     });
   } catch (error) {
+    if (externalSignal?.aborted) {
+      throw new RpcAttemptError('request cancelled', false);
+    }
     const detail = error instanceof Error ? `${error.name}: ${error.message}` : 'fetch failed';
     throw new RpcAttemptError(`network error (${detail})`, true, 'network');
   } finally {
     clearTimeout(timer);
+    externalSignal?.removeEventListener('abort', abortFromCaller);
   }
 
   if (!response.ok) {
@@ -142,10 +166,8 @@ async function requestOnce<T>(
     throw new RpcAttemptError('invalid JSON response', false);
   }
   if (payload.error) {
-    throw new RpcAttemptError(
-      `RPC ${payload.error.code ?? 'error'}: ${payload.error.message ?? 'unknown error'}`,
-      false,
-    );
+    // Provider messages are untrusted; expose only the numeric category.
+    throw new RpcAttemptError(`RPC ${payload.error.code ?? 'error'}`, false);
   }
   if (!Object.prototype.hasOwnProperty.call(payload, 'result')) {
     throw new RpcAttemptError('RPC response has no result', false);
@@ -164,13 +186,23 @@ export async function rpcRequest<T>(
   dependencies: RpcRequestDependencies = {},
 ): Promise<T> {
   const fetchFn = dependencies.fetchFn ?? fetch;
-  const sleep = dependencies.sleep ?? defaultSleep;
+  const sleep = dependencies.sleep ?? ((ms: number) => defaultSleep(ms, dependencies.signal));
   const random = dependencies.random ?? Math.random;
   const timeoutMs = dependencies.timeoutMs ?? RPC_REQUEST_TIMEOUT_MS;
 
   for (let attempt = 0; ; attempt++) {
+    if (dependencies.signal?.aborted) {
+      throw new Error(`RPC ${method} request cancelled`);
+    }
     try {
-      return await requestOnce<T>(endpoint, method, params, fetchFn, timeoutMs);
+      return await requestOnce<T>(
+        endpoint,
+        method,
+        params,
+        fetchFn,
+        timeoutMs,
+        dependencies.signal,
+      );
     } catch (error) {
       const rpcError = error instanceof RpcAttemptError
         ? error
@@ -196,7 +228,7 @@ export interface EvmRpcActivity {
   txHash?: string;
 }
 
-type EvmActivityHandler = (activity: EvmRpcActivity) => void;
+type EvmActivityHandler = (activity: EvmRpcActivity) => void | Promise<void>;
 type RpcMethodRequest = (method: string, params: unknown[]) => Promise<unknown>;
 type PollerStatus = 'connecting' | 'open' | 'subscribed' | 'ok' | 'error' | 'close';
 
@@ -244,6 +276,9 @@ export class SharedEvmPoller {
   private readonly autoStart: boolean;
   private readonly onStatus?: SharedEvmPollerOptions['onStatus'];
   private readonly warnings: RpcRetryWarningAggregator;
+  private readonly abortController = new AbortController();
+  private readonly inFlightHandlers = new Set<Promise<void>>();
+  private readonly inFlightPolls = new Set<Promise<EvmPollResult>>();
   private timer: ReturnType<typeof setTimeout> | undefined;
   private running = false;
   private closed = false;
@@ -261,7 +296,10 @@ export class SharedEvmPoller {
       this.endpoint,
       method,
       params,
-      { onRetry: (event) => this.warnings.record(event) },
+      {
+        onRetry: (event) => this.warnings.record(event),
+        signal: this.abortController.signal,
+      },
     ));
   }
 
@@ -316,6 +354,16 @@ export class SharedEvmPoller {
   }
 
   async pollOnce(): Promise<EvmPollResult> {
+    const poll = this.performPoll();
+    this.inFlightPolls.add(poll);
+    void poll.then(
+      () => this.inFlightPolls.delete(poll),
+      () => this.inFlightPolls.delete(poll),
+    );
+    return poll;
+  }
+
+  private async performPoll(): Promise<EvmPollResult> {
     const headHex = await this.request('eth_blockNumber', []);
     if (typeof headHex !== 'string' || !/^0x[0-9a-f]+$/i.test(headHex)) {
       throw new Error('RPC eth_blockNumber returned an invalid result');
@@ -365,7 +413,22 @@ export class SharedEvmPoller {
           raw: normalizedRaw,
           txHash: typeof raw.transactionHash === 'string' ? raw.transactionHash : undefined,
         };
-        for (const handler of handlers) handler(activity);
+        const deliveries: Promise<void>[] = [];
+        for (const handler of handlers) {
+          let delivery: Promise<void>;
+          try {
+            delivery = Promise.resolve(handler(activity));
+          } catch (error) {
+            delivery = Promise.reject(error);
+          }
+          this.inFlightHandlers.add(delivery);
+          void delivery.then(
+            () => this.inFlightHandlers.delete(delivery),
+            () => this.inFlightHandlers.delete(delivery),
+          );
+          deliveries.push(delivery);
+        }
+        await Promise.all(deliveries);
       }
 
       totalLogs += result.length;
@@ -381,12 +444,17 @@ export class SharedEvmPoller {
     };
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
     this.closed = true;
     this.running = false;
+    this.abortController.abort();
     if (this.timer !== undefined) clearTimeout(this.timer);
     this.timer = undefined;
     this.subscribers.clear();
+    await Promise.allSettled([
+      ...this.inFlightPolls,
+      ...this.inFlightHandlers,
+    ]);
     this.warnings.stop();
     this.onStatus?.('close');
   }
