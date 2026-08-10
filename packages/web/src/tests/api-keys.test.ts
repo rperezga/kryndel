@@ -108,16 +108,14 @@ describe('[PB.1] requireApiKey logic', () => {
 // ── Plan gating ───────────────────────────────────────────────────────────────
 
 describe('[PB.1] plan gating', () => {
+  const canCreateApiKeys = (plan: 'free' | 'pro') => plan === 'pro';
+
   it('Free plan cannot create API keys (logic check)', () => {
-    const plan = 'free';
-    const allowed = plan === 'pro';
-    expect(allowed).toBe(false);
+    expect(canCreateApiKeys('free')).toBe(false);
   });
 
   it('Pro plan can create API keys', () => {
-    const plan = 'pro';
-    const allowed = plan === 'pro';
-    expect(allowed).toBe(true);
+    expect(canCreateApiKeys('pro')).toBe(true);
   });
 
   it('max 5 keys enforced', () => {

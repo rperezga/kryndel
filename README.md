@@ -23,7 +23,7 @@ Build on top of it: public **REST API v1** + **TypeScript SDK** + **signed webho
 
 ## Try it
 
-**Hosted (easiest)** — [kryndel.dev](https://kryndel.dev). Search and decode any contract in the public explorer, then sign in to watch contracts and get alerts.
+**Hosted (easiest)** — [kryndel.dev](https://kryndel.dev). Search and decode any EVM contract in the public explorer, then use **Watch this contract** to sign in, start watching it if needed and continue directly to a prefilled alert rule. Mint, burn and admin-activity templates are available in the builder.
 
 | Plan | Price | Includes |
 |---|---|---|

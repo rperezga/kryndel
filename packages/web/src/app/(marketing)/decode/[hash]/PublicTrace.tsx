@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { createAlertHref } from '@/lib/create-alert-link';
 import { resolveAddressLabel } from '@/lib/address-labels';
 
 /**
@@ -83,10 +84,12 @@ export function PublicTrace({
   txHash,
   trace,
   contractName,
+  isAuthenticated,
 }: {
   txHash: string;
   trace: Trace;
   contractName?: string | null;
+  isAuthenticated: boolean;
 }) {
   const call = trace.events.find((e) => e.kind === 'call');
   const emit = trace.events.find((e) => e.kind === 'emit');
@@ -118,6 +121,12 @@ export function PublicTrace({
               {trace.contract.address.slice(0, 8)}…{trace.contract.address.slice(-4)}
             </span>
           </span>
+          <Link
+            href={createAlertHref(trace.contract.address, isAuthenticated, 'any')}
+            className="text-ds-green hover:underline no-underline font-bold"
+          >
+            Watch this contract
+          </Link>
         </div>
       </header>
 
@@ -169,9 +178,19 @@ export function PublicTrace({
                   <Pill tone="green">{name}</Pill>
                   {external && <Pill tone="amber">external</Pill>}
                   {external && emitter && (
-                    <span className="font-ds-mono text-[10px] text-ds-text-3" title={emitter}>
-                      from {emitter.slice(0, 8)}…{emitter.slice(-4)}
-                    </span>
+                    <>
+                      <span className="font-ds-mono text-[10px] text-ds-text-3" title={emitter}>
+                        from {emitter.slice(0, 8)}…{emitter.slice(-4)}
+                      </span>
+                      {isAddr(emitter) && (
+                        <Link
+                          href={createAlertHref(emitter, isAuthenticated, 'any')}
+                          className="font-ds-mono text-[10px] text-ds-green hover:underline no-underline"
+                        >
+                          Watch this contract
+                        </Link>
+                      )}
+                    </>
                   )}
                 </div>
                 <ArgRows data={ev.data} />
@@ -189,10 +208,10 @@ export function PublicTrace({
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           <Link
-            href="/login"
+            href={createAlertHref(trace.contract.address, isAuthenticated, 'any')}
             className="px-5 py-2.5 bg-ds-green text-ds-shell rounded font-ds-mono text-xs uppercase font-bold tracking-wider no-underline hover:opacity-90 transition-opacity"
           >
-            Start monitoring free
+            Watch this contract
           </Link>
           <Link
             href="/decode"

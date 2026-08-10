@@ -4,6 +4,7 @@ import { getDb } from '@/lib/db';
 import { requireUser } from '@/lib/current-user';
 import { PLAN_LIMITS, type Plan } from '@/lib/models/user';
 import { assertSafePublicUrl, sanitizeKeys } from '@/lib/ssrf';
+import { buildAlertFilter } from '@/lib/alert-filter';
 import { matchesRule } from '@kryndel/core';
 import { ObjectId } from 'mongodb';
 import { revalidatePath } from 'next/cache';
@@ -90,14 +91,10 @@ export async function addRuleAction(
     if (!filterValue?.trim()) {
       return { error: 'Filter value is required when an argument name is set.' };
     }
-    const OP_MAP: Record<string, string> = {
-      '>': '$gt', '<': '$lt', '>=': '$gte', '<=': '$lte', '=': '$eq',
-    };
-    const mongoOp = OP_MAP[filterOp ?? '='];
-    if (!mongoOp) {
+    filter = buildAlertFilter(cleanArg, filterOp, filterValue);
+    if (!filter) {
       return { error: 'Invalid filter operator.' };
     }
-    filter = { [cleanArg]: { [mongoOp]: filterValue.trim() } };
   }
 
   const db = await getDb();
@@ -239,17 +236,7 @@ export async function previewMatchesAction(
   }
 
   // Build temporary rule object to run matchesRule
-  let filter: Record<string, any> | undefined;
-  if (filterArgName?.trim()) {
-    const cleanArg = filterArgName.trim();
-    const OP_MAP: Record<string, string> = {
-      '>': '$gt', '<': '$lt', '>=': '$gte', '<=': '$lte', '=': '$eq',
-    };
-    const mongoOp = OP_MAP[filterOp ?? '='];
-    if (mongoOp && filterValue?.trim()) {
-      filter = { [cleanArg]: { [mongoOp]: filterValue.trim() } };
-    }
-  }
+  const filter = buildAlertFilter(filterArgName, filterOp, filterValue);
 
   const tempRule = {
     id: 'temp',

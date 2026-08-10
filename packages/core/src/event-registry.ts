@@ -179,6 +179,90 @@ export const STANDARD_EVENT_REGISTRY = new Map<string, RegistryEntry>([
       ]}] as Abi,
     },
   ],
+
+  // ── Ownership / access control / proxy administration ───────────────────────
+  // OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
+  [
+    '0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0',
+    {
+      name: 'OwnershipTransferred',
+      abi: [{ type: 'event', name: 'OwnershipTransferred', inputs: [
+        { name: 'previousOwner', type: 'address', indexed: true },
+        { name: 'newOwner',      type: 'address', indexed: true },
+      ]}] as Abi,
+    },
+  ],
+
+  // RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
+  [
+    '0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d',
+    {
+      name: 'RoleGranted',
+      abi: [{ type: 'event', name: 'RoleGranted', inputs: [
+        { name: 'role',    type: 'bytes32', indexed: true },
+        { name: 'account', type: 'address', indexed: true },
+        { name: 'sender',  type: 'address', indexed: true },
+      ]}] as Abi,
+    },
+  ],
+
+  // RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
+  [
+    '0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b',
+    {
+      name: 'RoleRevoked',
+      abi: [{ type: 'event', name: 'RoleRevoked', inputs: [
+        { name: 'role',    type: 'bytes32', indexed: true },
+        { name: 'account', type: 'address', indexed: true },
+        { name: 'sender',  type: 'address', indexed: true },
+      ]}] as Abi,
+    },
+  ],
+
+  // Paused(address account)
+  [
+    '0x62e78cea01bee320cd4e420270b5ea74000d11b0c9f74754ebdbfc544b05a258',
+    {
+      name: 'Paused',
+      abi: [{ type: 'event', name: 'Paused', inputs: [
+        { name: 'account', type: 'address', indexed: false },
+      ]}] as Abi,
+    },
+  ],
+
+  // Unpaused(address account)
+  [
+    '0x5db9ee0a495bf2e6ff9c91a7834c1ba4fdd244a5e8aa4e537bd38aeae4b073aa',
+    {
+      name: 'Unpaused',
+      abi: [{ type: 'event', name: 'Unpaused', inputs: [
+        { name: 'account', type: 'address', indexed: false },
+      ]}] as Abi,
+    },
+  ],
+
+  // Upgraded(address indexed implementation)
+  [
+    '0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b',
+    {
+      name: 'Upgraded',
+      abi: [{ type: 'event', name: 'Upgraded', inputs: [
+        { name: 'implementation', type: 'address', indexed: true },
+      ]}] as Abi,
+    },
+  ],
+
+  // AdminChanged(address previousAdmin, address newAdmin)
+  [
+    '0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f',
+    {
+      name: 'AdminChanged',
+      abi: [{ type: 'event', name: 'AdminChanged', inputs: [
+        { name: 'previousAdmin', type: 'address', indexed: false },
+        { name: 'newAdmin',      type: 'address', indexed: false },
+      ]}] as Abi,
+    },
+  ],
 ]);
 
 /** Look up a standard event by topic0 (0x-prefixed, lowercase). */

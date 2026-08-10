@@ -36,7 +36,7 @@ This document describes what Kryndel does **not** do today, and why. No spin. (L
 
 ## Web app & explorer
 
-Live at **[kryndel.dev](https://kryndel.dev)** (Next.js, `packages/web`): public explorer (search/decode any contract, tx, event or selector) plus an authenticated dashboard (contracts, events, alerts, webhooks, API keys, billing). Self-hosting the web app requires `MONGODB_URI` and the app env vars in `.env`.
+Live at **[kryndel.dev](https://kryndel.dev)** (Next.js, `packages/web`): public explorer (search/decode any contract, tx, event or selector) plus an authenticated dashboard (contracts, events, alerts, webhooks, API keys, billing). Public EVM create-alert links preserve the selected contract and template through NextAuth sign-in and add unwatched contracts subject to plan capacity; saving a rule still requires an authenticated account and a configured alert destination. Sentinel issuer alerts are not available yet because issuer signals need their own watch model rather than EVM event rules. Self-hosting the web app requires `MONGODB_URI` and the app env vars in `.env`.
 
 ## General
 

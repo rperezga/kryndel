@@ -8,6 +8,8 @@ import * as React from 'react';
 import { useState, useCallback, useRef } from 'react';
 import { useActionState } from 'react';
 import { watchEvent, type WatchState } from './actions';
+import { ALERT_TEMPLATES } from '@/lib/alert-templates';
+import { createAlertHref } from '@/lib/create-alert-link';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -297,6 +299,41 @@ function StateTab() {
 
 // ── Alerts tab ────────────────────────────────────────────────────────────────
 
+function AlertTemplateLinks({ address, isAuthenticated }: { address: string; isAuthenticated: boolean }) {
+  return (
+    <div className="bg-ds-panel border border-solid border-ds-border rounded-lg p-5 space-y-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h3 className="font-ds-mono text-[10px] text-ds-text-3 uppercase tracking-wider font-bold m-0">
+            Create alert
+          </h3>
+          <p className="font-ds-mono text-[10px] text-ds-text-3 mt-1 mb-0">
+            Open the rule builder with this contract prefilled.
+          </p>
+        </div>
+        <a
+          href={createAlertHref(address, isAuthenticated, 'any')}
+          className="font-ds-mono text-xs bg-ds-green text-ds-shell font-bold px-4 py-2 rounded no-underline hover:opacity-90 transition-opacity"
+        >
+          Create alert →
+        </a>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {ALERT_TEMPLATES.map((template) => (
+          <a
+            key={template.id}
+            href={createAlertHref(address, isAuthenticated, template.id)}
+            title={template.blurb}
+            className="font-ds-mono text-[10px] text-ds-text-2 border border-solid border-ds-border hover:border-ds-green hover:text-ds-green px-3 py-1.5 rounded no-underline transition-colors"
+          >
+            {template.label}
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function AlertsTab({
   address,
   eventNames,
@@ -313,20 +350,19 @@ function AlertsTab({
 
   if (!isAuthenticated) {
     return (
-      <div className="py-16 text-center space-y-3">
-        <p className="font-ds-mono text-sm text-ds-text-2">Sign in to create alert rules for this contract.</p>
-        <a
-          href={`/login?callbackUrl=${encodeURIComponent(`/contract/${address}`)}`}
-          className="inline-block font-ds-mono text-xs border border-solid border-ds-green text-ds-green hover:bg-ds-green/10 px-4 py-2 rounded no-underline transition-colors"
-        >
-          Sign in →
-        </a>
+      <div className="space-y-4">
+        <AlertTemplateLinks address={address} isAuthenticated={false} />
+        <p className="font-ds-mono text-xs text-ds-text-3 text-center">
+          Sign in continues directly to the prefilled rule builder.
+        </p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      <AlertTemplateLinks address={address} isAuthenticated />
+
       {/* Existing rules */}
       {alertRules.length > 0 ? (
         <div className="bg-ds-panel border border-solid border-ds-border rounded-lg overflow-hidden">

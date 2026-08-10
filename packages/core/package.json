@@ -1,6 +1,6 @@
 {
   "name": "@kryndel/core",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Kryndel core — watcher, decoder, indexer, recorder, subscriber & alerts for XRPL contract observability",
   "type": "module",
   "main": "dist/index.js",

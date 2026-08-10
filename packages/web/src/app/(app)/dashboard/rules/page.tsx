@@ -58,6 +58,7 @@ export default async function RulesPage({
       surface: c.surface as 'evm' | 'native',
       knownEvents,
       hasAbi: !!c.abi,
+      active: c.active !== false,
     };
   });
 

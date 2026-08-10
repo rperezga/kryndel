@@ -113,16 +113,10 @@ export function SentinelCard({ snapshot, stale = false }: { snapshot: IssuerSnap
       {/* CTA */}
       <section className="bg-ds-panel border border-solid border-ds-border rounded-lg p-6 text-center space-y-3">
         <p className="font-ds-sans text-sm text-ds-text-2 m-0">
-          Want an <span className="text-ds-text font-bold">instant alert</span> if any of this changes —
-          master key re-enabled, freeze or clawback toggled, supply jumps?
+          Issuer alerts need a Sentinel-native signal model and are not available yet.
         </p>
+        {/* TODO: Add issuer alerts after Sentinel signals use their own issuer-watch model. */}
         <div className="flex flex-wrap justify-center gap-3">
-          <Link
-            href="/login"
-            className="px-5 py-2.5 bg-ds-green text-ds-shell rounded font-ds-mono text-xs uppercase font-bold tracking-wider no-underline hover:opacity-90 transition-opacity"
-          >
-            Watch this issuer
-          </Link>
           <Link
             href="/sentinel"
             className="px-5 py-2.5 border border-solid border-ds-border text-ds-text-2 rounded font-ds-mono text-xs uppercase font-bold tracking-wider no-underline hover:border-ds-green hover:text-ds-green transition-colors"

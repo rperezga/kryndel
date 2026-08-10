@@ -1,6 +1,6 @@
 {
   "name": "@kryndel/web",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "description": "Kryndel explorer — Next.js x-ray for XRPL contracts (calls, events, emitted tx, watch button)",
   "scripts": {

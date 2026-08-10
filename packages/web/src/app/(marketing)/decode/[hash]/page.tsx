@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { auth } from '@/auth';
 import { headers } from 'next/headers';
 import { createPublicClient, http } from 'viem';
 import { traceEvmTx } from '@kryndel/core';
@@ -53,6 +54,7 @@ export default async function DecodeHashPage({ params }: Props) {
     return <ErrorState txHash={hash} kind="invalid" />;
   }
 
+  const isAuthenticated = !!(await auth())?.user;
   const db = await getDb();
 
   // 1. Public cache (shared across all visitors — good for SEO + abuse control).
@@ -63,6 +65,7 @@ export default async function DecodeHashPage({ params }: Props) {
         txHash={txHash}
         trace={serialize(cached.trace)}
         contractName={(cached.contractName as string) ?? null}
+        isAuthenticated={isAuthenticated}
       />
     );
   }
@@ -113,7 +116,7 @@ export default async function DecodeHashPage({ params }: Props) {
 
     // Note: we intentionally do NOT surface any user's private contract label on
     // this public page — only the address + built-in labels (resolveAddressLabel).
-    return <PublicTrace txHash={txHash} trace={trace} contractName={null} />;
+    return <PublicTrace txHash={txHash} trace={trace} contractName={null} isAuthenticated={isAuthenticated} />;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     const isNotFound = /not be found|not found|could not be found|transaction.*hash/i.test(msg);
