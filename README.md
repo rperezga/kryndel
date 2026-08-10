@@ -12,7 +12,7 @@
 
 ## What it does
 
-The XRPL has a contract layer now — the **EVM Sidechain** (mainnet, chain ID 1440002) and native **XLS-0101** WASM contracts. But explorers like XRPScan and Bithomp track payments and tokens; they don't decode your contracts or alert when something fires. Kryndel does:
+The XRPL has a contract layer now — the **EVM Sidechain** (mainnet, chain ID 1440000) and native **XLS-0101** WASM contracts. But explorers like XRPScan and Bithomp track payments and tokens; they don't decode your contracts or alert when something fires. Kryndel does:
 
 - **Detect** — watch any contract in real time (no scripts, no cron).
 - **Decode** — events by name (`Transfer`, `Approval`, `Swap`…) with decoded args, not raw topics.
@@ -36,7 +36,7 @@ Build on top of it: public **REST API v1** + **TypeScript SDK** + **signed webho
 
 | Network | Status | Endpoint |
 |---|---|---|
-| XRPL EVM Sidechain (mainnet) | ✅ **Live** end to end | `https://rpc.xrplevm.org` (chain ID 1440002) |
+| XRPL EVM Sidechain (mainnet) | ✅ **Live** end to end | Ordered `EVM_RPC_URLS` fallback (chain ID 1440000) |
 | XRPL native — XLS-0101 (AlphaNet) | 🔧 Watcher ready; full decode **pending AlphaNet** | see [LIMITATIONS.md](LIMITATIONS.md) |
 
 > Honest status: EVM Sidechain mainnet is fully live. The native XLS-0101 watcher and decoder are built and unit-tested offline; live decode is blocked by AlphaNet endpoint availability — stated openly across the product, never faked.
@@ -54,7 +54,7 @@ Build on top of it: public **REST API v1** + **TypeScript SDK** + **signed webho
 **Signal path:**
 
 ```
-EVM RPC ──────┐
+EVM RPCs ─────┐
                ├─▶  watcher ─▶ decoder ─▶ indexer (MongoDB)
 AlphaNet WS ──┘  (XLS-0101)        │
                                     ├─▶ subscriber ─▶ alert (Telegram / signed webhook)
@@ -69,7 +69,7 @@ AlphaNet WS ──┘  (XLS-0101)        │
 git clone https://github.com/rperezga/kryndel.git
 cd kryndel
 pnpm install
-cp .env.example .env   # fill in EVM_RPC_URL, MONGODB_URI, TELEGRAM_*
+cp .env.example .env   # fill in EVM_RPC_URLS, MONGODB_URI, TELEGRAM_*
 pnpm build
 ```
 
@@ -94,7 +94,7 @@ pnpm test   # full vitest suite — green in CI (Apache-2.0, GitHub Actions)
 
 ## Honest limitations
 
-See [LIMITATIONS.md](LIMITATIONS.md) for the full, no-spin list. Short version: the public EVM RPC has no subscription log filters (Kryndel polls `eth_getLogs`, ~4 s latency) and no `debug_traceTransaction` (so no state diff); native XLS-0101 live decode is pending AlphaNet endpoint availability.
+See [LIMITATIONS.md](LIMITATIONS.md) for the full, no-spin list. Short version: the EVM worker uses an ordered multi-RPC fallback and polls `eth_getLogs` about every 10 s, but all configured providers can still fail and `debug_traceTransaction` remains unavailable; native XLS-0101 live decode is pending AlphaNet endpoint availability.
 
 ## Contributing
 

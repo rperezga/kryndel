@@ -15,9 +15,9 @@
  * no DB access required to debug.
  */
 import { getDb } from './db.js';
+import { resolveEvmRpcUrls, safeRpcEndpoint } from './evm-rpc-config.js';
 
-const PRIMARY_RPC = process.env.EVM_RPC_URL ?? 'https://rpc.xrplevm.org';
-const PUBLIC_RPC = 'https://rpc.xrplevm.org';
+const RPC_URLS = resolveEvmRpcUrls();
 const INTERVAL_MS = 20_000;
 const TIMEOUT_MS = 5_000;
 const BUILD = 'heartbeat-v2';
@@ -73,13 +73,14 @@ async function loop(getWatcherCount: () => number): Promise<void> {
   }
 }
 
-/** Try the configured RPC, then the public RPC as a fallback. */
+/** Try every configured RPC in order until one returns the EVM head. */
 async function fetchHeadBlock(): Promise<{ headBlock: number | null; source: string | null; error: string | null }> {
-  const urls = PRIMARY_RPC === PUBLIC_RPC ? [PRIMARY_RPC] : [PRIMARY_RPC, PUBLIC_RPC];
   let lastError: string | null = null;
-  for (const url of urls) {
+  for (const url of RPC_URLS) {
     const r = await tryRpc(url);
-    if (r.headBlock !== null) return { headBlock: r.headBlock, source: url, error: null };
+    if (r.headBlock !== null) {
+      return { headBlock: r.headBlock, source: safeRpcEndpoint(url), error: null };
+    }
     lastError = r.error;
   }
   return { headBlock: null, source: null, error: lastError };

@@ -2,17 +2,19 @@
 
 This document describes what Kryndel does **not** do today, and why. No spin. (Live product: [kryndel.dev](https://kryndel.dev).)
 
-## EVM Sidechain (XRPL EVM, chain ID 1440002)
+## EVM Sidechain (XRPL EVM, chain ID 1440000)
 
-**No `eth_newFilter` / `eth_getFilterChanges`.** The public RPC (`rpc.xrplevm.org`) rejects subscription-based log filters. Kryndel polls with `eth_getLogs` every ~6 s, looking back 5 blocks.
+**No `eth_newFilter` / `eth_getFilterChanges`.** The public RPC rejects subscription-based log filters. The hosted worker uses one shared polling pipeline for all EVM watchers, polls about every 10 s, reads through head − 2, and backfills blocks advanced since the previous successful tick.
 
 **`eth_getLogs` restrictions.** The RPC rejects: (a) queries where `fromBlock == toBlock`, (b) queries that combine an `address` filter with a block range. Workaround: fetch logs with no address, filter client-side by `log.address`.
 
 **No state diff.** `debug_traceTransaction` is not available on the public RPC. The `stateDiff` field in `Trace` is always empty.
 
-**Polling lag.** Alert latency is roughly the polling interval (~4 s) plus processing time. Not suitable for latency-sensitive use cases.
+**Polling lag.** Alert latency is roughly the polling interval (~10 s) plus provider and processing time. Not suitable for latency-sensitive use cases.
 
-**RPC error backoff.** The EVM watcher uses exponential backoff on consecutive RPC failures: starting at 4 s, doubling each time up to a ceiling of 60 s, then resetting to 4 s on the next successful poll. This prevents hammering a degraded endpoint but means alert latency can temporarily grow to 60 s during RPC instability.
+**Multi-RPC fallback is not provider independence.** `EVM_RPC_URLS` accepts an ordered comma-separated list. The worker tries the last successful endpoint first and moves to the next configured endpoint when a request fails; `EVM_RPC_URL` remains the single-endpoint compatibility fallback. `/healthz` exposes the sanitized endpoint that answered the latest `eth_blockNumber`. If every configured provider is unavailable, indexing pauses until a later polling tick succeeds.
+
+**Single-endpoint retry behavior.** When only one RPC URL is configured, transient 403/408/429/5xx and network failures retain the 1/2/4/8/16 s retry schedule. With multiple URLs, the worker tries each provider before waiting for the next shared poll, avoiding one provider's retry window becoming a fleet-wide stall.
 
 **Alerts: hosted vs self-host.** In the **hosted** service (kryndel.dev) a dedicated 24/7 worker evaluates rules and dispatches alerts. In the **self-host CLI**, rules live in MongoDB and are evaluated in the same process as the watcher, with no persistence of in-flight events across restarts.
 
@@ -38,7 +40,7 @@ Live at **[kryndel.dev](https://kryndel.dev)** (Next.js, `packages/web`): public
 
 ## General
 
-**Single-node.** No clustering, no horizontal scaling. One watcher process per contract per machine.
+**Single-node.** No clustering or horizontal scaling. The hosted Kali/PM2 worker uses one shared EVM poller that fans events out to all watched contracts.
 
 **MongoDB M0 limits.** The free Atlas tier (M0) has storage and connection limits. Suitable for demo and development; not for production indexing of high-volume contracts.
 

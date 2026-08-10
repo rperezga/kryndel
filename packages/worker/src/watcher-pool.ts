@@ -15,6 +15,7 @@ import { dispatch }          from './dispatcher.js';
 import { deliverWebhooks }   from './webhook-deliverer.js';
 import { getDb }             from './db.js';
 import { SharedEvmPoller }   from './evm-rpc.js';
+import { resolveEvmRpcUrls, safeRpcEndpoint } from './evm-rpc-config.js';
 
 /**
  * F1: Decode an EVM ContractActivity using the cascade decoder.
@@ -115,6 +116,7 @@ interface PoolEntry {
 interface WorkerEvmPoller {
   createWatcher(address: string): Watcher;
   stop(): void | Promise<void>;
+  readonly activeEndpoint?: string | null;
 }
 
 export class WatcherPool {
@@ -122,12 +124,19 @@ export class WatcherPool {
   private readonly evmPoller: WorkerEvmPoller;
 
   constructor(evmPoller?: WorkerEvmPoller) {
-    const endpoint = process.env.EVM_RPC_URL ?? 'https://rpc.xrplevm.org';
-    this.evmPoller = evmPoller ?? new SharedEvmPoller(endpoint, {
+    const endpoints = resolveEvmRpcUrls();
+    this.evmPoller = evmPoller ?? new SharedEvmPoller(endpoints, {
       onStatus: (status, detail) => console.log(
         `[pool] evm:shared -> ${status}${detail ? ` ${detail}` : ''}`,
       ),
     });
+  }
+
+  /** Sanitized endpoint that answered the shared poller's last head request. */
+  get evmRpcEndpoint(): string | null {
+    return this.evmPoller.activeEndpoint
+      ? safeRpcEndpoint(this.evmPoller.activeEndpoint)
+      : null;
   }
 
   /** Current number of active watchers. */
