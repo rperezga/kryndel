@@ -26,6 +26,9 @@ interface RuleData {
   contractAddress: string;
   surface: 'evm' | 'native';
   eventName: string;
+  kind?: 'event' | 'silence';
+  silenceMinutes?: number;
+  silenceFiredAt?: string | null;
   name: string;
   channel: string;
   target: string;
@@ -67,6 +70,11 @@ function formatRelativeTime(isoString?: string): string {
   }
   const diffDays = Math.floor(diffHrs / 24);
   return `${diffDays}d ago`;
+}
+
+function formatSilenceWindow(minutes?: number): string {
+  if (!minutes || minutes <= 0) return '—';
+  return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(minutes / 60)}h`;
 }
 
 function formatCondition(filter?: Record<string, any>): string {
@@ -122,13 +130,15 @@ export function RulesClient({
 
   // Wizard state machine
   const [step, setStep] = useState(1);
-  const [triggerType, setTriggerType] = useState<'event' | 'function' | 'failed' | 'state'>('event');
+  const [triggerType, setTriggerType] = useState<'event' | 'function' | 'failed' | 'state' | 'silence'>('event');
   const [selectedContractAddress, setSelectedContractAddress] = useState(
     contracts.length > 0 ? contracts[0].address : ''
   );
   const [selectedEventName, setSelectedEventName] = useState('Transfer');
   const [isCustomEvent, setIsCustomEvent] = useState(false);
   const [customEventInput, setCustomEventInput] = useState('');
+  const [silencePreset, setSilencePreset] = useState<'60' | '360' | '720' | '1440' | 'custom'>('60');
+  const [customSilenceHours, setCustomSilenceHours] = useState('');
 
   // Criteria filters
   const [enableFilter, setEnableFilter] = useState(false);
@@ -154,8 +164,16 @@ export function RulesClient({
   // Apply a one-click template: pre-fill the builder and jump to the step that
   // still needs input (threshold for large-transfer, else destinations).
   const applyTemplate = (t: AlertTemplate, contractAddr?: string) => {
-    setTriggerType('event');
+    setTriggerType(t.triggerType ?? 'event');
     if (contractAddr) setSelectedContractAddress(contractAddr);
+    const templateSilenceMinutes = t.silenceMinutes ?? 60;
+    if ([60, 360, 720, 1440].includes(templateSilenceMinutes)) {
+      setSilencePreset(String(templateSilenceMinutes) as '60' | '360' | '720' | '1440');
+      setCustomSilenceHours('');
+    } else {
+      setSilencePreset('custom');
+      setCustomSilenceHours(String(templateSilenceMinutes / 60));
+    }
     // Use the custom-event input for every template so the value can't be reset
     // by the "event not in knownEvents" effect (matters for '*' = any event).
     setIsCustomEvent(true);
@@ -168,7 +186,7 @@ export function RulesClient({
     setAlertName(t.defaultName);
     setAddError(null);
     setIsAddSheetOpen(true);
-    setStep(t.requiresThreshold ? 3 : 4);
+    setStep(t.triggerType === 'silence' ? 3 : t.requiresThreshold ? 3 : 4);
   };
 
   // Open drawer if 'add=true' search param is present
@@ -230,13 +248,24 @@ export function RulesClient({
 
   // Dynamic Event Name selection
   const computedEventName = useMemo(() => {
-    if (triggerType === 'failed') return '*';
+    if (triggerType === 'failed' || triggerType === 'silence') return '*';
     if (isCustomEvent) return customEventInput;
     return selectedEventName;
   }, [triggerType, isCustomEvent, customEventInput, selectedEventName]);
 
+  const selectedSilenceMinutes = useMemo(() => {
+    if (silencePreset !== 'custom') return Number(silencePreset);
+    const hours = Number(customSilenceHours);
+    return Number.isFinite(hours) && hours > 0 ? Math.round(hours * 60) : 0;
+  }, [silencePreset, customSilenceHours]);
+
   // Debounced matches preview calculator
   useEffect(() => {
+    if (triggerType === 'silence') {
+      setPreviewCount(null);
+      setIsPreviewLoading(false);
+      return;
+    }
     if (!selectedContractAddress || !computedEventName) {
       setPreviewCount(null);
       return;
@@ -261,7 +290,7 @@ export function RulesClient({
     }, 400);
 
     return () => clearTimeout(handler);
-  }, [selectedContractAddress, computedEventName, enableFilter, filterArgName, filterOp, filterValue]);
+  }, [triggerType, selectedContractAddress, computedEventName, enableFilter, filterArgName, filterOp, filterValue]);
 
   // Filtered Rules list
   const filteredRules = useMemo(() => {
@@ -325,7 +354,9 @@ export function RulesClient({
         destinationTarget,
         enableFilter ? filterArgName : undefined,
         enableFilter ? filterOp : undefined,
-        enableFilter ? filterValue : undefined
+        enableFilter ? filterValue : undefined,
+        triggerType === 'silence' ? 'silence' : 'event',
+        triggerType === 'silence' ? selectedSilenceMinutes : undefined,
       );
 
       if (res.error) {
@@ -366,7 +397,9 @@ export function RulesClient({
       header: () => <span className="font-label-caps text-label-caps">Event / Trigger</span>,
       cell: ({ row }) => (
         <span className="font-ds-mono text-xs text-ds-text font-bold uppercase">
-          {row.original.eventName === '*' ? 'ALL (*)' : row.original.eventName}
+          {row.original.kind === 'silence'
+            ? `SILENCE ${formatSilenceWindow(row.original.silenceMinutes)}`
+            : row.original.eventName === '*' ? 'ALL (*)' : row.original.eventName}
         </span>
       ),
       size: 120,
@@ -376,7 +409,9 @@ export function RulesClient({
       header: () => <span className="font-label-caps text-label-caps">Condition</span>,
       cell: ({ row }) => (
         <span className="font-ds-mono text-xs text-ds-text-2">
-          {formatCondition(row.original.filter)}
+          {row.original.kind === 'silence'
+            ? `No events for ${formatSilenceWindow(row.original.silenceMinutes)}`
+            : formatCondition(row.original.filter)}
         </span>
       ),
       size: 140,
@@ -589,11 +624,17 @@ export function RulesClient({
 
                     <div className="text-ds-text-3 font-bold uppercase text-[9px] tracking-wider select-none">Event / Trigger</div>
                     <div className="text-right font-bold uppercase text-ds-text text-[10px]">
-                      {r.eventName === '*' ? 'ALL (*)' : r.eventName}
+                      {r.kind === 'silence'
+                        ? `SILENCE ${formatSilenceWindow(r.silenceMinutes)}`
+                        : r.eventName === '*' ? 'ALL (*)' : r.eventName}
                     </div>
 
                     <div className="text-ds-text-3 font-bold uppercase text-[9px] tracking-wider select-none">Condition</div>
-                    <div className="text-right">{formatCondition(r.filter)}</div>
+                    <div className="text-right">
+                      {r.kind === 'silence'
+                        ? `No events for ${formatSilenceWindow(r.silenceMinutes)}`
+                        : formatCondition(r.filter)}
+                    </div>
 
                     <div className="text-ds-text-3 font-bold uppercase text-[9px] tracking-wider select-none">Channel</div>
                     <div className="text-right">
@@ -697,6 +738,27 @@ export function RulesClient({
 
                     <button
                       type="button"
+                      onClick={() => {
+                        setTriggerType('silence');
+                        setEnableFilter(false);
+                      }}
+                      className={`p-3.5 border border-solid rounded-lg text-left transition-all cursor-pointer flex items-start gap-3.5 outline-none ${
+                        triggerType === 'silence'
+                          ? 'border-ds-green text-ds-green bg-[rgba(43,217,111,0.08)]'
+                          : 'border-ds-border text-ds-text-2 bg-transparent hover:border-ds-text-3'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined mt-0.5" style={{ fontSize: '20px' }}>heart_check</span>
+                      <div>
+                        <div className="text-xs font-bold font-ds-mono uppercase">Heartbeat / Silence</div>
+                        <div className="text-[10px] text-ds-text-3 mt-1 normal-case leading-relaxed font-ds-sans">
+                          Alerts when a watched contract emits no events for the configured time window.
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => setTriggerType('function')}
                       className={`p-3.5 border border-solid rounded-lg text-left transition-all cursor-pointer flex items-start gap-3.5 outline-none ${
                         triggerType === 'function'
@@ -773,7 +835,7 @@ export function RulesClient({
                     </select>
                   </div>
 
-                  {triggerType !== 'failed' && (
+                  {triggerType !== 'failed' && triggerType !== 'silence' && (
                     <div className="space-y-4">
                       {/* Select Event */}
                       <div className="space-y-2">
@@ -845,12 +907,61 @@ export function RulesClient({
                       Configuring a rule on all transaction failures/reverts for this contract. The trigger event is set to `*`.
                     </div>
                   )}
+
+                  {triggerType === 'silence' && (
+                    <div className="p-4 border border-solid border-ds-green/30 rounded-lg bg-ds-green/5 font-ds-sans text-xs text-ds-text-2 leading-relaxed select-none">
+                      <span className="font-bold text-ds-green uppercase font-ds-mono block mb-1">Dead-man&apos;s switch</span>
+                      This rule monitors the contract&apos;s event activity rather than matching an event name.
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* STEP 3: Criteria Condition */}
               {step === 3 && (
                 <div className="space-y-6 flex-1">
+                  {triggerType === 'silence' ? (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-ds-mono text-ds-text-3 uppercase tracking-wider font-bold">
+                          Silence window
+                        </label>
+                        <select
+                          value={silencePreset}
+                          onChange={(event) => setSilencePreset(event.target.value as typeof silencePreset)}
+                          className="w-full bg-ds-shell border border-solid border-ds-border rounded p-3 text-xs font-ds-mono text-ds-green focus:border-ds-green outline-none font-bold"
+                        >
+                          <option value="60">1 hour</option>
+                          <option value="360">6 hours</option>
+                          <option value="720">12 hours</option>
+                          <option value="1440">24 hours</option>
+                          <option value="custom">Custom hours</option>
+                        </select>
+                      </div>
+                      {silencePreset === 'custom' && (
+                        <div className="space-y-2">
+                          <label className="block text-[10px] font-ds-mono text-ds-text-3 uppercase tracking-wider font-bold">
+                            Custom hours
+                          </label>
+                          <input
+                            type="number"
+                            min="0.02"
+                            max="8760"
+                            step="0.25"
+                            required
+                            value={customSilenceHours}
+                            onChange={(event) => setCustomSilenceHours(event.target.value)}
+                            placeholder="e.g. 2.5"
+                            className="w-full bg-ds-shell border border-solid border-ds-border rounded p-3 text-xs font-ds-mono text-ds-text focus:border-ds-green outline-none"
+                          />
+                        </div>
+                      )}
+                      <p className="text-[10px] text-ds-text-3 leading-relaxed m-0 font-ds-sans">
+                        Checked every 60 seconds. A new event sends a resumed notification and re-arms the rule.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="contents">
                   <div className="space-y-2">
                     <label className="flex items-center gap-2 text-[10px] font-ds-mono text-ds-text-3 uppercase tracking-wider font-bold cursor-pointer select-none">
                       <input
@@ -922,6 +1033,8 @@ export function RulesClient({
                             : 'Wei for amounts — no decimals applied (e.g. 1 XRP = 1,000,000 drops, 1 ETH = 10^18 wei).'}
                         </span>
                       </div>
+                    </div>
+                  )}
                     </div>
                   )}
                 </div>
@@ -1044,8 +1157,14 @@ export function RulesClient({
                 <div className="mt-auto pt-4 border-0 border-t border-solid border-ds-border space-y-3">
                   <div className="p-4 rounded-lg bg-ds-panel-2 border border-solid border-ds-border/50 flex flex-col gap-3 font-ds-mono text-xs select-none">
                     <div className="flex justify-between items-center">
-                      <span className="text-ds-text-3 font-bold uppercase text-[9px] tracking-wider">Historical Preview (24h)</span>
-                      {isPreviewLoading ? (
+                      <span className="text-ds-text-3 font-bold uppercase text-[9px] tracking-wider">
+                        {triggerType === 'silence' ? 'Silence window' : 'Historical Preview (24h)'}
+                      </span>
+                      {triggerType === 'silence' ? (
+                        <span className="font-bold text-ds-green">
+                          {formatSilenceWindow(selectedSilenceMinutes)}
+                        </span>
+                      ) : isPreviewLoading ? (
                         <span className="text-[10px] text-ds-text-3">CALCULATING…</span>
                       ) : (
                         <span className="font-bold text-ds-green">
@@ -1114,7 +1233,7 @@ export function RulesClient({
                       <Button
                         type="submit"
                         variant="primary"
-                        disabled={isPending || !destinationTarget}
+                        disabled={isPending || !destinationTarget || (triggerType === 'silence' && selectedSilenceMinutes < 1)}
                         className="flex-1 font-ds-mono text-xs uppercase"
                       >
                         {isPending ? 'Saving…' : 'Save Rule'}
