@@ -1,8 +1,8 @@
 /**
- * Worker entry point -- Railway 24/7 process.
+ * Worker entry point -- Kali/PM2 24/7 process.
  *
  * Starts:
- * 1. HTTP server on PORT (Railway injects this) -- serves /healthz
+ * 1. Loopback HTTP server on PORT -- serves /healthz
  * 2. WatcherPool + reconcile loop
  * 3. Webhook retry loop (processRetries every 60s)
  *
@@ -18,7 +18,7 @@ import { startHeartbeatLoop, getHeartbeatState } from './heartbeat.js';
 import { startSentinelReportLoop } from './sentinel-report-job.js';
 
 const PORT = parseInt(process.env.PORT ?? '8080', 10);
-const WORKER_VERSION = '0.4.1';
+const WORKER_VERSION = '0.4.2';
 
 // Seguridad: escuchar SOLO en loopback por defecto. El worker es OUTBOUND (Mongo Atlas,
 // RPC/WS de XRPL, alertas Telegram/Resend); su único endpoint inbound es /healthz, que solo
@@ -80,14 +80,16 @@ void retryLoop();
 
 const server = createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/healthz') {
+    const heartbeat = getHeartbeatState();
     const body = JSON.stringify({
-      status:     'ok',
-      build:      `worker-v${WORKER_VERSION}`,
-      uptime:     process.uptime(),
-      watchers:   pool.size,
-      activeKeys: pool.activeKeys,
-      heartbeat:  getHeartbeatState(),
-      ts:         new Date().toISOString(),
+      status:          'ok',
+      build:           `worker-v${WORKER_VERSION}`,
+      uptime:          process.uptime(),
+      watchers:        pool.size,
+      activeKeys:      pool.activeKeys,
+      evmRpcEndpoint:  pool.evmRpcEndpoint ?? heartbeat.source,
+      heartbeat,
+      ts:              new Date().toISOString(),
     });
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(body);

@@ -75,6 +75,7 @@ interface RpcRequestDependencies {
   onRetry?: (event: RpcRetryEvent) => void;
   timeoutMs?: number;
   signal?: AbortSignal;
+  retryDelays?: readonly number[];
 }
 
 class RpcAttemptError extends Error {
@@ -189,6 +190,7 @@ export async function rpcRequest<T>(
   const sleep = dependencies.sleep ?? ((ms: number) => defaultSleep(ms, dependencies.signal));
   const random = dependencies.random ?? Math.random;
   const timeoutMs = dependencies.timeoutMs ?? RPC_REQUEST_TIMEOUT_MS;
+  const retryDelays = dependencies.retryDelays ?? RPC_RETRY_DELAYS_MS;
 
   for (let attempt = 0; ; attempt++) {
     if (dependencies.signal?.aborted) {
@@ -207,7 +209,7 @@ export async function rpcRequest<T>(
       const rpcError = error instanceof RpcAttemptError
         ? error
         : new RpcAttemptError(error instanceof Error ? error.message : String(error), false);
-      const retryDelay = RPC_RETRY_DELAYS_MS[attempt];
+      const retryDelay = retryDelays[attempt];
       if (!rpcError.transient || retryDelay === undefined || !rpcError.reason) {
         throw new Error(
           `RPC ${method} failed after ${attempt + 1} attempt(s): ${rpcError.message}`,
@@ -229,11 +231,53 @@ export interface EvmRpcActivity {
 }
 
 type EvmActivityHandler = (activity: EvmRpcActivity) => void | Promise<void>;
-type RpcMethodRequest = (method: string, params: unknown[]) => Promise<unknown>;
+export type RpcMethodRequest = (method: string, params: unknown[]) => Promise<unknown>;
+export type RpcEndpointRequest = (
+  endpoint: string,
+  method: string,
+  params: unknown[],
+) => Promise<unknown>;
 type PollerStatus = 'connecting' | 'open' | 'subscribed' | 'ok' | 'error' | 'close';
+
+function normalizeRpcEndpoints(endpoint: string | string[]): string[] {
+  const endpoints = (Array.isArray(endpoint) ? endpoint : [endpoint])
+    .map((url) => url.trim())
+    .filter(Boolean);
+  if (endpoints.length === 0) throw new Error('At least one EVM RPC endpoint is required');
+  return endpoints;
+}
+
+/** Ordered, sticky failover: retain the last successful endpoint until it fails. */
+export function createRpcFallbackRequest(
+  endpoint: string | string[],
+  requestEndpoint: RpcEndpointRequest,
+  onSuccess?: (endpoint: string, method: string) => void,
+): RpcMethodRequest {
+  const endpoints = normalizeRpcEndpoints(endpoint);
+  let activeIndex = 0;
+
+  return async (method, params) => {
+    let lastError: unknown;
+    for (let offset = 0; offset < endpoints.length; offset++) {
+      const index = (activeIndex + offset) % endpoints.length;
+      try {
+        const result = await requestEndpoint(endpoints[index], method, params);
+        activeIndex = index;
+        onSuccess?.(endpoints[index], method);
+        return result;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw new Error(`RPC ${method} failed on all ${endpoints.length} endpoint(s)`, {
+      cause: lastError,
+    });
+  };
+}
 
 interface SharedEvmPollerOptions {
   request?: RpcMethodRequest;
+  requestEndpoint?: RpcEndpointRequest;
   random?: () => number;
   autoStart?: boolean;
   onStatus?: (status: PollerStatus, detail?: string) => void;
@@ -272,6 +316,7 @@ export function jitteredIntervalMs(random: () => number = Math.random): number {
 export class SharedEvmPoller {
   private readonly subscribers = new Map<string, Set<EvmActivityHandler>>();
   private readonly request: RpcMethodRequest;
+  private readonly endpoints: string[];
   private readonly random: () => number;
   private readonly autoStart: boolean;
   private readonly onStatus?: SharedEvmPollerOptions['onStatus'];
@@ -283,24 +328,38 @@ export class SharedEvmPoller {
   private running = false;
   private closed = false;
   private lastProcessedBlock: bigint | null = null;
+  private _activeEndpoint: string | null = null;
 
   constructor(
-    private readonly endpoint: string,
+    endpoint: string | string[],
     options: SharedEvmPollerOptions = {},
   ) {
+    this.endpoints = normalizeRpcEndpoints(endpoint);
     this.random = options.random ?? Math.random;
     this.autoStart = options.autoStart !== false;
     this.onStatus = options.onStatus;
     this.warnings = options.warnings ?? new RpcRetryWarningAggregator();
-    this.request = options.request ?? ((method, params) => rpcRequest(
-      this.endpoint,
+    const requestEndpoint = options.requestEndpoint ?? ((url, method, params) => rpcRequest(
+      url,
       method,
       params,
       {
         onRetry: (event) => this.warnings.record(event),
         signal: this.abortController.signal,
+        retryDelays: this.endpoints.length === 1 ? RPC_RETRY_DELAYS_MS : [],
       },
     ));
+    this.request = options.request ?? createRpcFallbackRequest(
+      this.endpoints,
+      requestEndpoint,
+      (url, method) => {
+        if (method === 'eth_blockNumber') this._activeEndpoint = url;
+      },
+    );
+  }
+
+  get activeEndpoint(): string | null {
+    return this._activeEndpoint;
   }
 
   get subscriberCount(): number {

@@ -1,4 +1,4 @@
-import { createPublicClient, http } from 'viem';
+import { createPublicClient, fallback, http } from 'viem';
 import type { ContractRef, Surface } from './types.js';
 
 // Watcher — observa transacciones/eventos de contrato.
@@ -13,6 +13,10 @@ export interface WatchOptions {
   endpoint: string;   // WS (nativo) | RPC URL (EVM) — desde variables de entorno
   contract?: string;  // address concreto a vigilar (opcional)
   onStatus?: (status: WatcherStatus, detail?: string) => void; // observabilidad de la conexión
+}
+
+export interface EvmWatchOptions extends Omit<WatchOptions, 'endpoint'> {
+  endpoint: string | string[];
 }
 
 export type ContractActivity =
@@ -128,18 +132,27 @@ export function createNativeWatcher(opts: WatchOptions): Watcher {
 
 // EVM watcher — XRPL EVM Sidechain (mainnet) via viem.
 // Usa polling HTTP (no requiere WS); watchEvent llama getLogs periódicamente.
-// EVM_RPC_URL = endpoint del sidechain (p.ej. https://rpc.xrplevm.org).
+// EVM_RPC_URLS / EVM_RPC_URL = endpoints del sidechain (p.ej. https://rpc.xrplevm.org).
 // Si opts.contract está definido, filtra por address; si no, escucha todos los logs.
 // [verificar] chain ID exacto del sidechain mainnet (no necesario para getLogs/watchEvent sin ENS).
-export function createEvmWatcher(opts: WatchOptions): Watcher {
-  const isEvmAddress = (s: string): s is `0x${string}` => /^0x[0-9a-fA-F]{40}$/.test(s);
-
-  const client = createPublicClient({
-    transport: http(opts.endpoint, {
+export function createEvmTransport(endpoint: string | string[]) {
+  const urls = Array.isArray(endpoint) ? endpoint : [endpoint];
+  if (urls.length === 0) throw new Error('At least one EVM RPC endpoint is required');
+  return fallback(
+    urls.map((url) => http(url, {
       timeout: 20_000,
       retryCount: 3,
       retryDelay: 1_500,
-    }),
+    })),
+    { rank: false },
+  );
+}
+
+export function createEvmWatcher(opts: EvmWatchOptions): Watcher {
+  const isEvmAddress = (s: string): s is `0x${string}` => /^0x[0-9a-fA-F]{40}$/.test(s);
+
+  const client = createPublicClient({
+    transport: createEvmTransport(opts.endpoint),
   });
 
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -149,7 +162,7 @@ export function createEvmWatcher(opts: WatchOptions): Watcher {
   return {
     async start(onActivity) {
       stopped = false;
-      status('connecting', opts.endpoint);
+      status('connecting', Array.isArray(opts.endpoint) ? opts.endpoint.join(',') : opts.endpoint);
 
       // Smoke-check with retry + backoff. A transient RPC failure at startup
       // (e.g. a 403 from an edge-blocked endpoint, or a timeout) must NOT kill
