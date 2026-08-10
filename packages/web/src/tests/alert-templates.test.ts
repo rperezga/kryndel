@@ -34,4 +34,16 @@ describe('complete alert templates', () => {
       defaultName: 'Admin activity',
     });
   });
+
+  it('silence presets a one-hour dead-man switch', () => {
+    expect(getAlertTemplate('silence')).toMatchObject({
+      id: 'silence',
+      label: 'Heartbeat / silence',
+      blurb: 'Alert if the contract goes quiet for N hours',
+      triggerType: 'silence',
+      silenceMinutes: 60,
+      enableFilter: false,
+      defaultName: 'Heartbeat / silence',
+    });
+  });
 });

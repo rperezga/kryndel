@@ -2,6 +2,18 @@
 
 All notable changes to Kryndel are documented here.
 
+## 0.4.3
+
+### Added
+
+- Heartbeat / silence dead-man-switch alert rules with 1h, 6h, 12h, 24h and custom windows.
+- Worker silence loop that emits one quiet alert, sends an activity-resumed notice and re-arms after a later event.
+- Per-contract `lastEventAt` tracking in the live event persistence path.
+
+### Changed
+
+- Event dispatch ignores silence rules; legacy rules without `kind` remain event rules.
+
 ## 0.4.1
 
 ### Added

@@ -22,6 +22,9 @@ export interface KAlertRule {
   contractAddress: string;   // lowercase EVM address or XRPL account
   surface:         Surface;  // 'evm' | 'native'
   eventName:       string;   // e.g. 'Transfer', '*' for all events
+  kind?:           'event' | 'silence'; // absent on legacy rules means 'event'
+  silenceMinutes?: number;
+  silenceFiredAt?: Date | null;
   channel:         AlertChannel;
   /** Channel-specific target: Telegram chat_id, webhook URL, email address, etc. */
   target:          string;

@@ -23,9 +23,11 @@ export interface WContract {
   address: string;
   surface: Surface;
   label?:  string;
+  name?:   string;
   abi?:    unknown;  // F1: user-uploaded ABI for named event decoding
   active:  boolean;
   createdAt: Date;
+  lastEventAt?: Date | null;
 }
 
 /** Alert rule document stored in `alert_rules` collection. */
@@ -35,6 +37,9 @@ export interface WAlertRule {
   contractAddress: string;
   surface:         Surface;
   eventName:       string;     // event name or '*' for any
+  kind?:           'event' | 'silence'; // absent on legacy rules means 'event'
+  silenceMinutes?: number;
+  silenceFiredAt?: Date | null;
   channel:         AlertChannel;
   target:          string;     // Telegram chat ID, webhook URL, etc.
   filter?:         Record<string, unknown>;

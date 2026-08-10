@@ -16,6 +16,8 @@ This document describes what Kryndel does **not** do today, and why. No spin. (L
 
 **Single-endpoint retry behavior.** When only one RPC URL is configured, transient 403/408/429/5xx and network failures retain the 1/2/4/8/16 s retry schedule. With multiple URLs, the worker tries each provider before waiting for the next shared poll, avoiding one provider's retry window becoming a fleet-wide stall.
 
+**Silence alerts.** Dead-man-switch rules are evaluated every 60 seconds, so firing and re-arm notifications have up to roughly one minute of scheduling granularity beyond the configured window. A silence alert means Kryndel has not persisted an event for that contract; it does **not** prove the RPC or worker is healthy. RPC/indexer availability is tracked separately by the worker heartbeat exposed through `/healthz`.
+
 **Alerts: hosted vs self-host.** In the **hosted** service (kryndel.dev) a dedicated 24/7 worker evaluates rules and dispatches alerts. In the **self-host CLI**, rules live in MongoDB and are evaluated in the same process as the watcher, with no persistence of in-flight events across restarts.
 
 **REST API.** A public **REST API v1 + signed webhooks + TypeScript SDK** are live on the hosted product (Pro). When self-hosting the CLI, the indexer writes to MongoDB and you read via the CLI or directly from the database.

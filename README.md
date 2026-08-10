@@ -16,7 +16,7 @@ The XRPL has a contract layer now — the **EVM Sidechain** (mainnet, chain ID 1
 
 - **Detect** — watch any contract in real time (no scripts, no cron).
 - **Decode** — events by name (`Transfer`, `Approval`, `Swap`…) with decoded args, not raw topics.
-- **Alert** — the moment a watched event fires → **Telegram** or a **signed webhook** (filter by decoded args). SMS, email & push coming soon.
+- **Alert** — the moment a watched event fires, or when a contract stays silent past its dead-man-switch window → **Telegram** or a **signed webhook** (filter by decoded args). SMS, email & push coming soon.
 - **Replay** — trace any tx into a readable timeline: **call → event → state → alert**.
 
 Build on top of it: public **REST API v1** + **TypeScript SDK** + **signed webhooks**.
@@ -31,6 +31,10 @@ Build on top of it: public **REST API v1** + **TypeScript SDK** + **signed webho
 | Pro | $19.99/mo | 20 contracts · signed webhooks · 90-day history · REST API + SDK |
 
 **Self-host (open-source)** — clone this repo and run the CLI/worker yourself (see [Quickstart](#quickstart-self-host)). Apache-2.0, no strings.
+
+## Alerts
+
+Alert rules can match decoded events and optional argument filters, or operate as a **heartbeat / silence** dead-man switch. A silence rule sends one notification after the selected 1h, 6h, 12h, 24h or custom window without events; when a later event arrives it sends `activity resumed`, clears the fired state and re-arms automatically. Hosted evaluation runs every 60 seconds.
 
 ## Networks
 

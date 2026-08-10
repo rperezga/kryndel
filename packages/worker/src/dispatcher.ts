@@ -140,6 +140,17 @@ function formatActivityEmail(
   return { subject, html };
 }
 
+function formatCustomAlertEmail(message: string): { subject: string; html: string } {
+  const subject = message.startsWith('✅')
+    ? 'Kryndel alert: contract activity resumed'
+    : 'Kryndel alert: contract silence detected';
+  const body = escapeHtml(message).replace(/\n/g, '<br>');
+  return {
+    subject,
+    html: `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#111;"><div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#16a34a;font-weight:700;">Kryndel Alert</div><p style="font-size:16px;line-height:1.6;">${body}</p></div>`,
+  };
+}
+
 // ── Arg filter matching ──────────────────────────────────────────────────────
 //
 // F1: Mirrors matchesRule() in @kryndel/core/subscriber.ts but operates on
@@ -184,23 +195,42 @@ function matchesWorkerFilter(
 
 // ── Main dispatch ─────────────────────────────────────────────────────────────
 
+export type DispatchRuleKind = 'event' | 'silence';
+
+export function shouldDispatchRule(
+  rule: WAlertRule,
+  activity: ContractActivity,
+  requestedKind: DispatchRuleKind = 'event',
+): boolean {
+  if (!rule.active) return false;
+  if ((rule.kind ?? 'event') !== requestedKind) return false;
+  if (requestedKind === 'silence') return true;
+  if (rule.eventName !== '*') {
+    const activityName = activity.kind === 'event' ? activity.name : activity.txType;
+    if (activityName !== rule.eventName) return false;
+  }
+  if (rule.filter && activity.kind === 'event' && activity.args) {
+    if (!matchesWorkerFilter(rule.filter, activity.args)) return false;
+  }
+  return true;
+}
+
+export interface DispatchOptions {
+  kind?: DispatchRuleKind;
+  message?: string;
+}
+
 export async function dispatch(
   activity:  ContractActivity,
   rules:     WAlertRule[],
   contract:  string,
+  options:   DispatchOptions = {},
 ): Promise<void> {
-  const matchingRules = rules.filter((r) => {
-    if (!r.active) return false;
-    if (r.eventName !== '*') {
-      const actName = activity.kind === 'event' ? activity.name : activity.txType;
-      if (actName !== r.eventName) return false;
-    }
-    // F1: arg filter (only applied if the activity has decoded args)
-    if (r.filter && activity.kind === 'event' && activity.args) {
-      if (!matchesWorkerFilter(r.filter, activity.args)) return false;
-    }
-    return true;
-  });
+  const requestedKind = options.kind ?? 'event';
+  if (requestedKind === 'silence' && !options.message) {
+    throw new Error('Silence dispatch requires a message.');
+  }
+  const matchingRules = rules.filter((rule) => shouldDispatchRule(rule, activity, requestedKind));
 
   if (matchingRules.length > 0) {
     try {
@@ -219,12 +249,19 @@ export async function dispatch(
       try {
         switch (rule.channel) {
           case 'telegram': {
-            const msg = formatActivity(activity, contract);
+            const msg = options.message
+              ? escapeMarkdownV2(options.message)
+              : formatActivity(activity, contract);
             await sendTelegram(rule.target, msg);
             break;
           }
           case 'webhook': {
-            await sendWebhook(rule.target, {
+            await sendWebhook(rule.target, options.message ? {
+              contract,
+              kind: requestedKind,
+              message: options.message,
+              ts: new Date().toISOString(),
+            } : {
               contract,
               kind:    activity.kind,
               name:    activity.kind === 'event' ? activity.name : activity.txType,
@@ -234,12 +271,14 @@ export async function dispatch(
             break;
           }
           case 'discord': {
-            const msg = formatActivity(activity, contract);
+            const msg = options.message ?? formatActivity(activity, contract);
             await sendDiscord(rule.target, msg);
             break;
           }
           case 'email': {
-            const { subject, html } = formatActivityEmail(activity, contract);
+            const { subject, html } = options.message
+              ? formatCustomAlertEmail(options.message)
+              : formatActivityEmail(activity, contract);
             await sendEmail(rule.target, subject, html);
             break;
           }

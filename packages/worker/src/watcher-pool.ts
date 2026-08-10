@@ -63,12 +63,14 @@ async function persistEvent(
   contract: WContract,
 ): Promise<void> {
   if (activity.kind !== 'event') return;
+  const address = contract.address.toLowerCase();
+  const activityAt = new Date();
+
   try {
     const db  = await getDb();
     const log = (activity.raw ?? {}) as {
       logIndex?: number; blockNumber?: bigint | number; transactionHash?: string;
     };
-    const address  = contract.address.toLowerCase();
     const txHash   = activity.txHash ?? log.transactionHash ?? undefined;
     const logIndex = typeof log.logIndex === 'number' ? log.logIndex : null;
     const name     = activity.name ?? 'unknown';
@@ -81,7 +83,7 @@ async function persistEvent(
       txHash,
       logIndex,
       ledgerOrBlock:   log.blockNumber != null ? Number(log.blockNumber) : undefined,
-      indexedAt:       new Date(),
+      indexedAt:       activityAt,
     };
 
     if (txHash) {
@@ -96,6 +98,19 @@ async function persistEvent(
   } catch (e) {
     console.error(
       `[pool] persistEvent error for ${contract.surface}:${contract.address.slice(0, 8)}…:`,
+      e,
+    );
+  }
+
+  try {
+    const db = await getDb();
+    await db.collection('contracts').updateMany(
+      { address, surface: contract.surface },
+      { $max: { lastEventAt: activityAt } },
+    );
+  } catch (e) {
+    console.error(
+      `[pool] lastEventAt error for ${contract.surface}:${contract.address.slice(0, 8)}…:`,
       e,
     );
   }

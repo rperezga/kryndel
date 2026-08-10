@@ -30,7 +30,9 @@ export async function addRuleAction(
   target: string,
   filterArgName?: string,
   filterOp?: string,
-  filterValue?: string
+  filterValue?: string,
+  kind: 'event' | 'silence' = 'event',
+  silenceMinutes?: number,
 ): Promise<ActionResponse> {
   let user;
   try {
@@ -40,15 +42,24 @@ export async function addRuleAction(
   }
 
   const cleanAddr = (contractAddress ?? '').trim().toLowerCase();
-  const cleanEvent = (eventName ?? '').trim();
+  if (kind !== 'event' && kind !== 'silence') {
+    return { error: 'Invalid alert rule kind.' };
+  }
+  const cleanEvent = kind === 'silence' ? '*' : (eventName ?? '').trim();
   const cleanTarget = (target ?? '').trim();
   const cleanName = (name ?? '').trim();
 
-  if (!cleanEvent) {
+  if (kind === 'event' && !cleanEvent) {
     return { error: 'Event name is required.' };
   }
-  if (!/^[0-9A-Za-z_\-x*]{1,80}$/.test(cleanEvent) && !/^0x[0-9a-fA-F]{64}$/.test(cleanEvent)) {
+  if (kind === 'event' && !/^[0-9A-Za-z_\-x*]{1,80}$/.test(cleanEvent) && !/^0x[0-9a-fA-F]{64}$/.test(cleanEvent)) {
     return { error: 'Invalid event name.' };
+  }
+  if (
+    kind === 'silence' &&
+    (!Number.isInteger(silenceMinutes) || silenceMinutes! < 1 || silenceMinutes! > 525_600)
+  ) {
+    return { error: 'Silence duration must be between 1 minute and 1 year.' };
   }
   if (!cleanTarget) {
     return { error: 'Destination target is required.' };
@@ -83,7 +94,7 @@ export async function addRuleAction(
 
   // Handle optional argument filters
   let filter: Record<string, any> | undefined;
-  if (filterArgName?.trim()) {
+  if (kind === 'event' && filterArgName?.trim()) {
     const cleanArg = filterArgName.trim();
     if (!/^[a-zA-Z_]\w{0,63}$/.test(cleanArg)) {
       return { error: 'Invalid argument name (letters, digits, underscore; max 64 chars).' };
@@ -115,7 +126,12 @@ export async function addRuleAction(
     contractAddress: cleanAddr,
     surface: contract.surface ?? 'evm',
     eventName: cleanEvent,
-    name: cleanName || `${cleanEvent} Alert`,
+    kind,
+    ...(kind === 'silence' ? {
+      silenceMinutes,
+      silenceFiredAt: null,
+    } : {}),
+    name: cleanName || (kind === 'silence' ? 'Heartbeat / silence' : `${cleanEvent} Alert`),
     channel,
     target: cleanTarget,
     ...(filter ? { filter } : {}),

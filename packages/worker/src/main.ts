@@ -16,9 +16,10 @@ import { processRetries }    from './webhook-deliverer.js';
 import { startSentinelLoop } from './sentinel-loop.js';
 import { startHeartbeatLoop, getHeartbeatState } from './heartbeat.js';
 import { startSentinelReportLoop } from './sentinel-report-job.js';
+import { startSilenceLoop } from './silence-loop.js';
 
 const PORT = parseInt(process.env.PORT ?? '8080', 10);
-const WORKER_VERSION = '0.4.2';
+const WORKER_VERSION = '0.4.3';
 
 // Seguridad: escuchar SOLO en loopback por defecto. El worker es OUTBOUND (Mongo Atlas,
 // RPC/WS de XRPL, alertas Telegram/Resend); su único endpoint inbound es /healthz, que solo
@@ -49,6 +50,10 @@ const stopReconcile = startReconcileLoop(pool);
 // ── Sentinel: XRPL issuer security & health watcher ───────────────────────────
 
 const stopSentinel = startSentinelLoop();
+
+// ── Silence alerts: dead-man's switch for watched contracts ──────────────────
+
+const stopSilence = startSilenceLoop();
 
 // ── Heartbeat: real indexer-health signal for the dashboard ───────────────────
 
@@ -110,6 +115,7 @@ async function shutdown(signal: string): Promise<void> {
   _retryLoopActive = false;
   stopReconcile();
   stopSentinel();
+  stopSilence();
   stopHeartbeat();
   stopSentinelReport();
   await pool.stopAll();

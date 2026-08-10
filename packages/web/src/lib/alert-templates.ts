@@ -11,7 +11,7 @@
  */
 export interface AlertTemplate {
   /** Stable id used in deep-links (?template=<id>). */
-  id: 'any' | 'large-transfer' | 'new-approval' | 'mint' | 'burn' | 'admin-activity';
+  id: 'any' | 'large-transfer' | 'new-approval' | 'mint' | 'burn' | 'admin-activity' | 'silence';
   /** Short button label. */
   label: string;
   /** Material Symbols icon name. */
@@ -20,6 +20,10 @@ export interface AlertTemplate {
   blurb: string;
   /** Event to match: '*' = all, else a specific event name. */
   eventName: string;
+  /** Wizard trigger selected by the template. */
+  triggerType?: 'event' | 'silence';
+  /** Silence threshold in minutes for dead-man-switch templates. */
+  silenceMinutes?: number;
   /** Whether the template sets an argument filter. */
   enableFilter: boolean;
   /** Filter argument name (when enableFilter). */
@@ -88,6 +92,17 @@ export const ALERT_TEMPLATES: AlertTemplate[] = [
     eventName: 'OwnershipTransferred',
     enableFilter: false,
     defaultName: 'Admin activity',
+  },
+  {
+    id: 'silence',
+    label: 'Heartbeat / silence',
+    icon: 'heart_check',
+    blurb: 'Alert if the contract goes quiet for N hours',
+    eventName: '*',
+    triggerType: 'silence',
+    silenceMinutes: 60,
+    enableFilter: false,
+    defaultName: 'Heartbeat / silence',
   },
   {
     id: 'new-approval',
