@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useMemo, useEffect } from 'react';
+import { useState, useTransition, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ds/DataTable';
@@ -15,6 +15,11 @@ import {
   type ActionResponse,
 } from './actions';
 import { ALERT_TEMPLATES, getAlertTemplate, type AlertTemplate } from '@/lib/alert-templates';
+import {
+  ensureContractForTemplate,
+  type AlertContractInfo,
+} from '@/lib/create-alert-link';
+import { addContractAction } from '@/app/(app)/dashboard/contracts/actions';
 
 interface RuleData {
   _id: string;
@@ -30,14 +35,7 @@ interface RuleData {
   createdAt: string;
 }
 
-interface ContractInfo {
-  _id: string;
-  address: string;
-  name: string;
-  surface: 'evm' | 'native';
-  knownEvents: string[];
-  hasAbi: boolean;
-}
+type ContractInfo = AlertContractInfo;
 
 interface Props {
   initialRules: RuleData[];
@@ -116,9 +114,11 @@ export function RulesClient({
   plan,
 }: Props) {
   const [rules, setRules] = useState<RuleData[]>(initialRules);
+  const [localContracts, setLocalContracts] = useState<ContractInfo[]>(contracts);
   const [filterContract, setFilterContract] = useState<string>(initialContractFilter);
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const handledDeepLinkRef = useRef<string | null>(null);
 
   // Wizard state machine
   const [step, setStep] = useState(1);
@@ -135,6 +135,7 @@ export function RulesClient({
   const [filterArgName, setFilterArgName] = useState('');
   const [filterOp, setFilterOp] = useState('>');
   const [filterValue, setFilterValue] = useState('');
+  const [isFilterValuePreset, setIsFilterValuePreset] = useState(false);
 
   // Destination channel target
   const [selectedChannel, setSelectedChannel] = useState<'telegram' | 'slack' | 'discord' | 'webhook' | 'email'>('telegram');
@@ -162,7 +163,8 @@ export function RulesClient({
     setEnableFilter(t.enableFilter);
     setFilterArgName(t.filterArgName ?? '');
     setFilterOp(t.filterOp ?? '>');
-    setFilterValue('');
+    setFilterValue(t.filterValue ?? '');
+    setIsFilterValuePreset(t.filterValue !== undefined);
     setAlertName(t.defaultName);
     setAddError(null);
     setIsAddSheetOpen(true);
@@ -177,23 +179,46 @@ export function RulesClient({
     }
   }, [searchParams]);
 
-  // Deep-link from the contracts "Watch" menu:
-  // /dashboard/rules?template=<id>[&contract=<addr>] → open the builder pre-filled.
+  // Deep-link from public EVM surfaces:
+  // /dashboard/rules?template=<id>[&contract=<addr>] → watch if needed, then open pre-filled.
   useEffect(() => {
-    const t = getAlertTemplate(searchParams.get('template'));
-    if (!t) return;
-    const c = searchParams.get('contract');
-    const match = c
-      ? contracts.find((x) => x.address.toLowerCase() === c.toLowerCase())
-      : undefined;
-    applyTemplate(t, match?.address);
+    const template = getAlertTemplate(searchParams.get('template'));
+    if (!template) return;
+    const address = searchParams.get('contract');
+    const deepLinkKey = `${template.id}:${address?.toLowerCase() ?? ''}`;
+    if (handledDeepLinkRef.current === deepLinkKey) return;
+    handledDeepLinkRef.current = deepLinkKey;
+
+    if (!address) {
+      applyTemplate(template);
+      return;
+    }
+
+    startTransition(() => {
+      void ensureContractForTemplate({
+        address,
+        contracts: localContracts,
+        addContract: addContractAction,
+        applyTemplate: (contract) => {
+          setLocalContracts((current) => current.some(
+            (item) => item.address.toLowerCase() === contract.address.toLowerCase(),
+          ) ? current : [contract, ...current]);
+          applyTemplate(template, contract.address);
+        },
+      }).then((result) => {
+        if (!result.error) return;
+        applyTemplate(template);
+        setAddError(result.error);
+      });
+    });
+    // The key guard intentionally makes each URL deep-link idempotent.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, [searchParams, localContracts]);
 
   // Set default event name when contract selection changes
   const activeContract = useMemo(() => {
-    return contracts.find((c) => c.address === selectedContractAddress);
-  }, [contracts, selectedContractAddress]);
+    return localContracts.find((contract) => contract.address === selectedContractAddress);
+  }, [localContracts, selectedContractAddress]);
 
   useEffect(() => {
     if (activeContract && activeContract.knownEvents.length > 0) {
@@ -471,7 +496,7 @@ export function RulesClient({
                 className="bg-transparent border-none font-ds-mono text-[10px] text-ds-green focus:ring-0 p-0 pr-4 cursor-pointer outline-none uppercase font-bold max-w-[200px]"
               >
                 <option value="all">ALL_CONTRACTS</option>
-                {contracts.map((c) => (
+                {localContracts.map((c) => (
                   <option key={c._id} value={c.address}>
                     {c.name.toUpperCase()} ({c.address.slice(0, 6)}…)
                   </option>
@@ -492,7 +517,7 @@ export function RulesClient({
       </header>
 
       {/* Quick templates — one-click watch presets that pre-fill the builder */}
-      {contracts.length > 0 && (
+      {localContracts.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-ds-mono text-[10px] text-ds-text-3 uppercase font-bold mr-1 select-none">
             Quick templates
@@ -740,7 +765,7 @@ export function RulesClient({
                       onChange={(e) => setSelectedContractAddress(e.target.value)}
                       className="w-full bg-ds-shell border border-solid border-ds-border rounded p-3 text-xs font-ds-mono text-ds-text focus:border-ds-green outline-none uppercase font-bold"
                     >
-                      {contracts.map((c) => (
+                      {localContracts.map((c) => (
                         <option key={c._id} value={c.address}>
                           {c.name.toUpperCase()} ({c.address.slice(0, 10)}…)
                         </option>
@@ -885,12 +910,16 @@ export function RulesClient({
                           type="text"
                           required
                           value={filterValue}
+                          readOnly={isFilterValuePreset}
+                          aria-readonly={isFilterValuePreset}
                           onChange={(e) => setFilterValue(e.target.value)}
                           placeholder="e.g. 1000000000000000000"
-                          className="w-full bg-ds-shell border border-solid border-ds-border rounded p-3 text-xs font-ds-mono text-ds-text focus:border-ds-green outline-none"
+                          className={`w-full bg-ds-shell border border-solid border-ds-border rounded p-3 text-xs font-ds-mono text-ds-text focus:border-ds-green outline-none ${isFilterValuePreset ? 'opacity-70 cursor-not-allowed' : ''}`}
                         />
                         <span className="block text-[9px] text-ds-text-3 font-ds-sans leading-relaxed">
-                          Wei for amounts — no decimals applied (e.g. 1 XRP = 1,000,000 drops, 1 ETH = 10^18 wei).
+                          {isFilterValuePreset
+                            ? 'Preset by this template.'
+                            : 'Wei for amounts — no decimals applied (e.g. 1 XRP = 1,000,000 drops, 1 ETH = 10^18 wei).'}
                         </span>
                       </div>
                     </div>
@@ -1001,7 +1030,12 @@ export function RulesClient({
 
               {addError && (
                 <div className="p-3 border border-solid border-ds-red/30 bg-ds-red/5 text-ds-red text-xs font-ds-mono rounded">
-                  {addError}
+                  <span>{addError}</span>
+                  {/upgrade/i.test(addError) && (
+                    <a href="/pricing" className="ml-2 text-ds-green font-bold underline">
+                      View plans
+                    </a>
+                  )}
                 </div>
               )}
 

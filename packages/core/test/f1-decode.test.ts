@@ -110,6 +110,20 @@ describe('event-registry', () => {
     expect(STANDARD_EVENT_NAMES).toContain('Approval');
     expect(STANDARD_EVENT_NAMES).toContain('Swap');
   });
+
+  it.each([
+    ['0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0', 'OwnershipTransferred', [true, true]],
+    ['0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d', 'RoleGranted', [true, true, true]],
+    ['0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b', 'RoleRevoked', [true, true, true]],
+    ['0x62e78cea01bee320cd4e420270b5ea74000d11b0c9f74754ebdbfc544b05a258', 'Paused', [false]],
+    ['0x5db9ee0a495bf2e6ff9c91a7834c1ba4fdd244a5e8aa4e537bd38aeae4b073aa', 'Unpaused', [false]],
+    ['0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b', 'Upgraded', [true]],
+    ['0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f', 'AdminChanged', [false, false]],
+  ] as const)('decodes %s as %s with the expected indexed inputs', (topic0, name, indexed) => {
+    const entry = lookupByTopic0(topic0);
+    expect(entry?.name).toBe(name);
+    expect(entry?.abi[0]?.inputs?.map((input: { indexed?: boolean }) => input.indexed)).toEqual(indexed);
+  });
 });
 
 describe('decoder cascade', () => {

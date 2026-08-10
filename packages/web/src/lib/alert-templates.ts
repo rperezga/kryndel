@@ -11,7 +11,7 @@
  */
 export interface AlertTemplate {
   /** Stable id used in deep-links (?template=<id>). */
-  id: 'any' | 'large-transfer' | 'new-approval';
+  id: 'any' | 'large-transfer' | 'new-approval' | 'mint' | 'burn' | 'admin-activity';
   /** Short button label. */
   label: string;
   /** Material Symbols icon name. */
@@ -26,7 +26,9 @@ export interface AlertTemplate {
   filterArgName?: string;
   /** Filter operator (when enableFilter): one of > < >= <= =. */
   filterOp?: string;
-  /** If true, the user must still type the threshold value (filterValue). */
+  /** Preset filter value applied by the template; unlike a threshold, it is not user-editable. */
+  filterValue?: string;
+  /** If true, the user must still type a threshold value. */
   requiresThreshold?: boolean;
   /** Default rule name pre-filled in the builder. */
   defaultName: string;
@@ -53,6 +55,39 @@ export const ALERT_TEMPLATES: AlertTemplate[] = [
     filterOp: '>',
     requiresThreshold: true,
     defaultName: 'Large transfer',
+  },
+  {
+    id: 'mint',
+    label: 'Mints',
+    icon: 'add_circle',
+    blurb: 'New tokens minted (Transfer from 0x0).',
+    eventName: 'Transfer',
+    enableFilter: true,
+    filterArgName: 'from',
+    filterOp: '=',
+    filterValue: '0x0000000000000000000000000000000000000000',
+    defaultName: 'Mints',
+  },
+  {
+    id: 'burn',
+    label: 'Burns',
+    icon: 'local_fire_department',
+    blurb: 'Tokens burned (Transfer to 0x0).',
+    eventName: 'Transfer',
+    enableFilter: true,
+    filterArgName: 'to',
+    filterOp: '=',
+    filterValue: '0x0000000000000000000000000000000000000000',
+    defaultName: 'Burns',
+  },
+  {
+    id: 'admin-activity',
+    label: 'Admin activity',
+    icon: 'admin_panel_settings',
+    blurb: 'Owner/admin changes — the events you never want to miss.',
+    eventName: 'OwnershipTransferred',
+    enableFilter: false,
+    defaultName: 'Admin activity',
   },
   {
     id: 'new-approval',
