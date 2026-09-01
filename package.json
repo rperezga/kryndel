@@ -34,21 +34,21 @@
   },
   "devDependencies": {
     "@types/node": "^25.9.2",
-    "@typescript-eslint/eslint-plugin": "^8.60.1",
-    "@typescript-eslint/parser": "^8.60.1",
+    "@typescript-eslint/eslint-plugin": "^8.68.0",
+    "@typescript-eslint/parser": "^8.68.0",
     "eslint": "^10.4.1",
     "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.8.3",
-    "tsx": "^4.22.4",
+    "prettier": "^3.9.6",
+    "tsx": "^4.23.12",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
   },
   "dependencies": {
     "ripple-address-codec": "^5.0.1",
-    "ripple-binary-codec": "^2.8.0",
-    "xrpl": "^5.0.0",
-    "viem": "^2.21.0",
+    "ripple-binary-codec": "^2.10.0",
+    "xrpl": "^5.1.0",
+    "viem": "^2.56.0",
     "mongodb": "^6.9.0",
-    "ws": "^8.18.0"
+    "ws": "^8.21.3"
   }
 }
